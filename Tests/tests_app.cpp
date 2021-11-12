@@ -2,7 +2,7 @@
 #include <string>
 //#include <Settings.hpp>
 
-#include "../EquiLand/Settings.hpp"
+#include "../EquiLand/source/Settings.hpp"
 
 TEST(SettingsParsing, RegexTests) {
 	using namespace std::string_literals;

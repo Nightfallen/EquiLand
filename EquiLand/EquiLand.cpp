@@ -1,12 +1,13 @@
 ﻿// EquiLand.cpp : Defines the entry point for the application.
 //
 
-#include "EquiLand.h"
+#include <source/Application.h>
+#include <source/gui.hpp>
 
-using namespace std;
-
-int main()
+int main(int, char**)
 {
-	cout << "Hello CMake." << endl;
+	Application* app = new Application();
+	app->SetUIHandler(UI_HANDLER);
+	app->Run();
 	return 0;
 }
