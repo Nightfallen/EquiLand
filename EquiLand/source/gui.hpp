@@ -8,10 +8,25 @@
 
 void CustomWindow(bool* is_open)
 {
+	static bool only_once = true;
+	if (only_once)
+	{
+		ImGui::SetNextWindowSize({1400.f, 800.f});
+		only_once = false;
+	}
 	ImGui::Begin("EquiLand");
-
 	ImGui::Text("Something coming soon...");
+
+	ImGui::Columns(2, "##mixed11", false);
+
 	widgets::EquiLand::RangeSelect();
+	ImGui::NextColumn();
+
+	widgets::EquiLand::BoardSelect();
+	ImGui::NextColumn();
+
+	ImGui::Columns(1);
+
 	ImGui::End();
 }
 

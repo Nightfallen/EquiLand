@@ -72,7 +72,7 @@ namespace widgets::EquiLand {
 					if (cur_os != prev_os)
 					{
 						if (os_res.empty())
-							os_res.push_back(std::format("{}{}{}", rankMap.at(y), rankMap.at(x), suit));
+							os_res.push_back(std::format("{}{}{}", rankMap.at(x), rankMap.at(y), suit));
 						else if (cur_os == prev_os + 1)
 						{
 							auto cur_index = os_res.size() - 1;
@@ -86,14 +86,14 @@ namespace widgets::EquiLand {
 							if (isPlusFound)
 							{
 								auto& str = os_res[cur_index];
-								str = std::format("{}{}{}+", rankMap.at(y), rankMap.at(x), suit);
+								str = std::format("{}{}{}+", rankMap.at(x), rankMap.at(y), suit);
 							}
 
 							if (isDashFound)
 							{
 								auto& str = os_res[cur_index];
 								str.erase(str.begin() + nDashIndex, str.end());
-								str.append(std::format("-{}{}{}", rankMap.at(y), rankMap.at(x), suit));
+								str.append(std::format("-{}{}{}", rankMap.at(x), rankMap.at(y), suit));
 							}
 
 							if (isFound) {
@@ -106,16 +106,16 @@ namespace widgets::EquiLand {
 							bool is_pair_left = (x - 1) == y;
 							if (is_pair_before_prev)
 							{
-								os_res[cur_index] = std::format("{}{}{}+", rankMap.at(y), rankMap.at(x), suit);
+								os_res[cur_index] = std::format("{}{}{}+", rankMap.at(x), rankMap.at(y), suit);
 							}
 							else
 							{
-								os_res[cur_index].append(std::format("-{}{}{}", rankMap.at(y), rankMap.at(x), suit));
+								os_res[cur_index].append(std::format("-{}{}{}", rankMap.at(x), rankMap.at(y), suit));
 							}
 						}
 						else
 						{
-							auto temp_str = std::format("{}{}{}", rankMap.at(y), rankMap.at(x), suit);
+							auto temp_str = std::format("{}{}{}", rankMap.at(x), rankMap.at(y), suit);
 							os_res.push_back(temp_str);
 						}
 					}
@@ -353,7 +353,12 @@ namespace widgets::EquiLand {
 					ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.00f, 0.00f, 0.00f, 0.36f));
 					ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.20f, 0.22f, 0.23f, 0.33f));
 				}
-				str = std::format("{}{}{}", rankMap.at(x), rankMap.at(y), postfix);
+				auto first = rankMap.at(x);
+				auto second = rankMap.at(y);
+				if (second > first)
+					std::swap(first, second);
+
+				str = std::format("{}{}{}", first, second, postfix);
 				auto flags = ImGuiSelectableFlags_SelectOnClick;
 				if (ImGui::Selectable(str.data(), &selected[13 * x + y], flags, ImVec2(40, 40)))
 				{
@@ -474,6 +479,16 @@ namespace widgets::EquiLand {
 
 	void BoardSelect()
 	{
+		constexpr auto holdem_max_board_cards = 5;
+		std::string boards_cards[holdem_max_board_cards] = {};
+
+		bool separator = false;
+		for (auto&& card : boards_cards)
+		{
+			if (separator) ImGui::SameLine();
+			ImGui::Button(card.data());
+			separator = true;
+		}
 
 	}
 
