@@ -3,6 +3,7 @@
 
 // C++ headers
 #include <algorithm>
+#include <array>
 #include <bit>
 #include <charconv>
 #include <chrono>

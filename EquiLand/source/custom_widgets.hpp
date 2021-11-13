@@ -299,6 +299,44 @@ namespace widgets::EquiLand {
 		return result;
 	}
 
+	void SelectableColor(ImVec2 szSelectable, ImU32 color)
+	{
+		auto& style = ImGui::GetStyle();
+		ImVec2 itemSpacing = style.ItemSpacing;
+		ImVec2 p_min = ImGui::GetCursorScreenPos() - style.FramePadding;
+		// temp workaround to 
+		p_min.y += 1;
+		ImVec2 p_max = p_min + itemSpacing + szSelectable; //ImVec2(p_min.x + ImGui::GetContentRegionAvailWidth(), p_min.y + ImGui::GetFrameHeight());
+		ImGui::GetWindowDrawList()->AddRectFilled(p_min, p_max, color);
+		
+	}
+
+	void SelectableColorEx2(ImVec2 prevCurPos, ImVec2 szSelectable, ImU32 color)
+	{
+		auto& style = ImGui::GetStyle();
+		ImVec2 itemSpacing = style.ItemSpacing;
+		ImVec2 p_min = prevCurPos - style.FramePadding;
+		// temp workaround to 
+		p_min.y += 1;
+		ImVec2 p_max = p_min + itemSpacing + szSelectable; //ImVec2(p_min.x + ImGui::GetContentRegionAvailWidth(), p_min.y + ImGui::GetFrameHeight());
+		//ImGui::GetWindowDrawList()->AddRectFilled(p_min, p_max, color);
+		//ImGui::GetBackgroundDrawList()->AddRectFilled(p_min, p_max, color);
+		ImGui::GetForegroundDrawList()->AddRectFilled(p_min, p_max, color);
+	}
+
+	void SelectableColorEx(ImVec2 xy, ImVec2 min, ImVec2 szSelectable, ImU32 color)
+	{
+		auto& style = ImGui::GetStyle();
+		auto& [x, y] = xy;
+		ImVec2 p_min = min;
+		auto itemSpacing = style.ItemSpacing;
+		p_min.x += y * 40 + y * itemSpacing.y;
+		p_min.y += x * 40 + x * itemSpacing.x;
+		ImVec2 p_max = p_min + szSelectable + style.ItemSpacing;
+		//ImGui::GetWindowDrawList()->AddRectFilled(p_min, p_max, color);
+		ImGui::GetBackgroundDrawList()->AddRectFilled(p_min, p_max, color);
+	}
+
 	void RangeSelect()
 	{
 		auto& style = ImGui::GetStyle();
@@ -324,6 +362,8 @@ namespace widgets::EquiLand {
 
 		std::string str;
 		auto posCurCursor = ImGui::GetCursorPos();
+		auto posWindow = ImGui::GetWindowPos();
+		auto elSize = ImVec2(40, 40);
 
 		for (int x = 0; x < 13; ++x)
 		{
@@ -335,9 +375,11 @@ namespace widgets::EquiLand {
 				if (x > y)
 				{
 					postfix = "o";
+					//ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.184, 0.019, 1, 1.f));
 					ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.20f, 0.25f, 0.29f, 0.55f));
 					ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.26f, 0.59f, 0.98f, 0.80f));
 					ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.26f, 0.59f, 0.98f, 1.00f));
+
 
 				}
 				else if (x != y)
@@ -360,6 +402,7 @@ namespace widgets::EquiLand {
 
 				str = std::format("{}{}{}", first, second, postfix);
 				auto flags = ImGuiSelectableFlags_SelectOnClick;
+				auto prevCurPos = ImGui::GetCursorScreenPos();
 				if (ImGui::Selectable(str.data(), &selected[13 * x + y], flags, ImVec2(40, 40)))
 				{
 					bool isShiftPressed = io.KeyShift;
@@ -413,14 +456,22 @@ namespace widgets::EquiLand {
 					else
 						action_type = ACTION_TYPE::SELECTED;
 				}
+				if (!ImGui::IsItemHovered() && !selected[13 * x + y])
+					if (x > y)
+					{
+						//SelectableColor(elSize, IM_COL32(255, 0, 0, 200));
+						//SelectableColorEx(ImVec2(x, y), posCurCursor + posWindow, elSize, IM_COL32(255, 0, 0, 200));
+						SelectableColorEx2(prevCurPos, elSize, IM_COL32(255, 0, 0, 200));
+					}
+
 				if (y != 13 - 1) ImGui::SameLine();
 				ImGui::PopStyleColor(3);
 			}
 		}
 
 		posCurCursor = posCurCursor;
-		auto posWindow = ImGui::GetWindowPos();
-		auto elSize = ImVec2(40, 40);
+		posWindow = posWindow;
+		
 		for (int x = 0; x < 13; ++x)
 		{
 			for (int y = 0; y < 13; ++y)
@@ -476,18 +527,101 @@ namespace widgets::EquiLand {
 		ImGui::Text(str_range.data());
 	}
 
+	template<size_t N>
+	std::string BuildBoardString(const std::array<std::string, N>& board)
+	{
+		std::string result;
+		for (auto&& card : board)
+		{
+			result.append(card);
+		}
+		return result;
+	}
 
 	void BoardSelect()
 	{
+		const std::unordered_map<int, char> rankMap = {
+		{0, 'A'}, {1, 'K'}, {2, 'Q'}, {3, 'J'}, {4, 'T'}, {5, '9'},
+		{6, '8'}, {7, '7'},   {8, '6'}, {9, '5'}, {10, '4'},  {11, '3'}, {12, '2'}
+		};
+		const char suits[4] = { 'h', 'c', 'd', 's' };
+
 		constexpr auto holdem_max_board_cards = 5;
-		std::string boards_cards[holdem_max_board_cards] = {};
+		//std::string boards_cards[holdem_max_board_cards] = {};
+		static std::array<std::string, holdem_max_board_cards> boards_cards = {};
+		//static std::vector<std::string> board_cards = {};
+		static size_t szArr = 0;
+		auto szButton = ImVec2(20, 20);
 
 		bool separator = false;
 		for (auto&& card : boards_cards)
 		{
 			if (separator) ImGui::SameLine();
-			ImGui::Button(card.data());
+			ImGui::Button(card.data(), szButton);
 			separator = true;
+		}
+
+
+
+		static bool selectables[13 * 4] = {};
+		separator = false;
+		static bool are_disabled = false;
+
+		for (int y = 0; y < 13; ++y)
+		{
+			auto& card = rankMap.at(y);
+			for (int x = 0; x < 4; ++x)
+			{
+				auto& suit = suits[x];
+				if (separator) ImGui::SameLine();
+				auto label = std::format("{}{}", card, suit);
+
+				bool disabled_helper = are_disabled && !(selectables[13 * x + y]);
+				ImGui::BeginDisabled(disabled_helper);
+				auto flags = ImGuiSelectableFlags_SelectOnClick;
+				auto prev_value = selectables[13 * x + y];
+				auto& cur_value = selectables[13 * x + y];
+				if (ImGui::Selectable(label.data(), &selectables[13 * x + y], flags, ImVec2(40, 40)))
+				{
+					bool value_changed = prev_value && !cur_value;
+					auto label_prev = std::format("{}{}", card, suit);
+					if (value_changed)
+					{
+						--szArr;
+						for (int k = 0; k < boards_cards.size(); ++k)
+						{
+							auto& cur_str = boards_cards[k];
+							if (cur_str.find(label_prev) != std::string::npos)
+							{
+								cur_str = "";
+								for (int ijk = k; ijk < boards_cards.size() - 1; ++ijk)
+								{
+									boards_cards[ijk] = boards_cards[ijk + 1];
+								}
+								boards_cards[szArr] = "";
+							}
+						}
+					}
+					else if (szArr != 5)
+						boards_cards[szArr++] = label;
+				}
+				ImGui::EndDisabled();
+				separator = true;
+			}
+			separator = false;
+		}
+
+		if (szArr == 5)
+			are_disabled = true;
+		else
+			are_disabled = false;
+
+		if (ImGui::Button("Clear##Board"))
+		{
+			boards_cards.fill("");
+			szArr = 0;
+			are_disabled = false;
+			std::fill(std::begin(selectables), std::end(selectables), 0);
 		}
 
 	}
