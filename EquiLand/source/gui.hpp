@@ -16,10 +16,11 @@ void CustomWindow(bool* is_open)
 	}
 	ImGui::Begin("EquiLand");
 	ImGui::Text("Something coming soon...");
-	ImGui::Columns(2, "##mixed11", false);
+	ImGui::Columns(3, "##main_ui", false);
 
 	ImGui::SetColumnWidth(0, 650.f);
-	ImGui::SetColumnWidth(1, 400.f);
+	ImGui::SetColumnWidth(1, 250.f);
+	ImGui::SetColumnWidth(2, 250.f);
 
 	widgets::EquiLand::RangeSelect();
 	ImGui::NextColumn();
@@ -27,6 +28,8 @@ void CustomWindow(bool* is_open)
 	widgets::EquiLand::BoardSelect();
 	ImGui::NextColumn();
 
+	widgets::EquiLand::DeadCardsSelect();
+	ImGui::NextColumn();
 	ImGui::Columns(1);
 
 	ImGui::End();

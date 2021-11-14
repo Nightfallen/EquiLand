@@ -602,7 +602,7 @@ namespace widgets::EquiLand {
 							}
 						}
 					}
-					else if (szArr != 5)
+					else if (szArr != boards_cards.size())
 						boards_cards[szArr++] = label;
 				}
 				ImGui::EndDisabled();
@@ -611,7 +611,7 @@ namespace widgets::EquiLand {
 			separator = false;
 		}
 
-		if (szArr == 5)
+		if (szArr == boards_cards.size())
 			are_disabled = true;
 		else
 			are_disabled = false;
@@ -624,6 +624,80 @@ namespace widgets::EquiLand {
 			std::fill(std::begin(selectables), std::end(selectables), 0);
 		}
 
+	}
+
+	void DeadCardsSelect()
+	{
+		const std::unordered_map<int, char> rankMap = {
+		{0, 'A'}, {1, 'K'}, {2, 'Q'}, {3, 'J'}, {4, 'T'}, {5, '9'},
+		{6, '8'}, {7, '7'},   {8, '6'}, {9, '5'}, {10, '4'},  {11, '3'}, {12, '2'}
+		};
+		const char suits[4] = { 'h', 'c', 'd', 's' };
+
+		constexpr auto max_hero_cards = 2;
+		static std::array<std::string, max_hero_cards> hero_hand = {};
+		static size_t szArr = 0;
+
+		static bool selectables[13 * 4] = {};
+		bool separator = false;
+		static bool are_disabled = false;
+
+		for (int y = 0; y < 13; ++y)
+		{
+			auto& card = rankMap.at(y);
+			for (int x = 0; x < 4; ++x)
+			{
+				auto& suit = suits[x];
+				if (separator) ImGui::SameLine();
+				auto label = std::format("{}{}", card, suit);
+
+				bool disabled_helper = are_disabled && !(selectables[13 * x + y]);
+				ImGui::BeginDisabled(disabled_helper);
+				auto flags = ImGuiSelectableFlags_SelectOnClick;
+				auto prev_value = selectables[13 * x + y];
+				auto& cur_value = selectables[13 * x + y];
+				if (ImGui::Selectable(label.data(), &selectables[13 * x + y], flags, ImVec2(40, 40)))
+				{
+					bool value_changed = prev_value && !cur_value;
+					auto label_prev = std::format("{}{}", card, suit);
+					if (value_changed)
+					{
+						--szArr;
+						for (int k = 0; k < hero_hand.size(); ++k)
+						{
+							auto& cur_str = hero_hand[k];
+							if (cur_str.find(label_prev) != std::string::npos)
+							{
+								cur_str = "";
+								for (int ijk = k; ijk < hero_hand.size() - 1; ++ijk)
+								{
+									hero_hand[ijk] = hero_hand[ijk + 1];
+								}
+								hero_hand[szArr] = "";
+							}
+						}
+					}
+					else if (szArr != hero_hand.size())
+						hero_hand[szArr++] = label;
+				}
+				ImGui::EndDisabled();
+				separator = true;
+			}
+			separator = false;
+		}
+
+		if (szArr == hero_hand.size())
+			are_disabled = true;
+		else
+			are_disabled = false;
+
+		if (ImGui::Button("Clear##Dead Cards"))
+		{
+			hero_hand.fill("");
+			szArr = 0;
+			are_disabled = false;
+			std::fill(std::begin(selectables), std::end(selectables), 0);
+		}
 	}
 
 }
