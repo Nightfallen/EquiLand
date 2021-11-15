@@ -2,6 +2,7 @@
 #### Poker Equity Calculator written in C++ with imgui
 
 ### Current Stage
+![EquiLand](./readme_assets/equiland.gif "EquiLand")
 - Implementing gui
 - Implementing livpeval (header-only library for poker hand evaluation and equity calculation)
 
