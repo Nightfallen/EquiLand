@@ -3,6 +3,9 @@
 
 #include <includes_pch.h>
 
+#include "OMPEval/HandEvaluator.h"
+#include "OMPEval/EquityCalculator.h"
+
 namespace widgets {
 	static void HelpMarker(const char* desc)
 	{
@@ -337,7 +340,12 @@ namespace widgets::EquiLand {
 		ImGui::GetBackgroundDrawList()->AddRectFilled(p_min, p_max, color);
 	}
 
-	void RangeSelect()
+	struct CardMatrix {
+		bool cards[169] = {};
+		std::string range;
+	};
+	
+	void RangeSelect(CardMatrix& matrix)
 	{
 		auto& style = ImGui::GetStyle();
 		auto& io = ImGui::GetIO();
@@ -346,8 +354,8 @@ namespace widgets::EquiLand {
 			{6, '8'}, {7, '7'},   {8, '6'}, {9, '5'}, {10, '4'},  {11, '3'}, {12, '2'}
 		};
 
-
-		static bool selected[13 * 13] = {};
+		auto& selected = matrix.cards;
+		//static bool selected[13 * 13] = {};
 		static int start_pos = -1;
 		static bool started_action = false;
 		static int started_pos = -1;
@@ -391,13 +399,13 @@ namespace widgets::EquiLand {
 				}
 				else
 				{
-					ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.00f, 0.00f, 0.00f, 0.52f));
-					ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.00f, 0.00f, 0.00f, 0.36f));
-					ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.20f, 0.22f, 0.23f, 0.33f));
+					ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.501f, 0.501f, 0.f, 0.82f));
+					ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.603, 0.803, 0.196, 0.83f));
+					ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.678f, 1.f, 0.184f, 0.86f));
 				}
 				auto first = rankMap.at(x);
 				auto second = rankMap.at(y);
-				if (second > first)
+				if (y < x)
 					std::swap(first, second);
 
 				str = std::format("{}{}{}", first, second, postfix);
@@ -461,7 +469,7 @@ namespace widgets::EquiLand {
 					{
 						//SelectableColor(elSize, IM_COL32(255, 0, 0, 200));
 						//SelectableColorEx(ImVec2(x, y), posCurCursor + posWindow, elSize, IM_COL32(255, 0, 0, 200));
-						SelectableColorEx2(prevCurPos, elSize, IM_COL32(255, 0, 0, 200));
+						//SelectableColorEx2(prevCurPos, elSize, IM_COL32(255, 0, 0, 200));
 					}
 
 				if (y != 13 - 1) ImGui::SameLine();
@@ -508,6 +516,7 @@ namespace widgets::EquiLand {
 			started_action = false;
 
 			auto str_data = BuildRangeString(selected);
+			matrix.range = str_data;
 			if (!str_data.empty())
 				str_range = str_data;
 			else
@@ -521,6 +530,7 @@ namespace widgets::EquiLand {
 		if (ImGui::Button("Generate range"))
 		{
 			auto str_data = BuildRangeString(selected);
+			matrix.range = str_data;
 			if (!str_data.empty())
 				str_range = str_data;
 		}
@@ -654,6 +664,19 @@ namespace widgets::EquiLand {
 		return result;
 	}
 
+	std::string BuildBoardString(const Cards& cards)
+	{
+		std::string result = "";
+		auto board = GetBoardCardsText(cards);
+		
+		for (auto&& card : board)
+		{
+			result.append(card);
+		}
+
+		return result;
+	}
+
 	template<size_t max_selected = 5>
 	std::string CardSelection(Cards& cards, bool sync, Cards& another_cards)
 	{
@@ -721,7 +744,7 @@ namespace widgets::EquiLand {
 	}
 
 	template<size_t max_selected = 5>
-	void DeadCardsSelect(Cards& cards, bool sync = false, Cards& board = Cards())
+	void DeadCardsSelect(Cards& cards, const std::string& range = "random", bool sync = false, Cards& board = Cards())
 	{
 		ImGui::Text("Dead Cards:");
 		CardSelection<max_selected>(cards, sync, board);
@@ -733,13 +756,41 @@ namespace widgets::EquiLand {
 			std::fill(std::begin(selectables), std::end(selectables), 0);
 		}
 
+		static bool calculated = false;
+		static std::string result_str;
+
 		std::string output = "Enter two holecards to see their equity vs the range";
-		if (result.size() == max_selected)
+		if (result.size() == max_selected && !calculated)
 		{
+			calculated = true;
+			using namespace omp;
+			auto hero_hand = BuildBoardString(cards);
+			auto board_cards = BuildBoardString(board);
+			std::vector<CardRange> ranges2{ range, hero_hand };
+			omp::EquityCalculator equity;
+			uint64_t board_mask = CardRange::getCardMask(board_cards);
+
+			equity.start(ranges2, board_mask, 0, true, 2e-3, nullptr, 0.05f, 0);
+			equity.wait();
+			auto res = equity.getResults();
+
 			output =
-				"Equity: 50 %%\n"
-				"Win:    45 %%\n"
-				"Tie:    5 %%";
+				"Equity: {:#3.3f} %%\n"
+				"Win:    {:#3.3f} %%\n"
+				"Tie:    {:#3.3f} %%";
+			auto total_wins = res.wins[0] + res.wins[1];
+			auto total_ties = res.ties[0] + res.ties[1];
+			auto total = total_ties + total_wins;
+			float eq_percent = res.equity[1] * 100.f;
+			float wins_percent = res.wins[1] / (float)total * 100.f;
+			float ties_percent = res.ties[1] / (float)total * 100.f;
+			result_str = std::format(output, eq_percent, wins_percent, ties_percent);
+		}
+
+		if (ImGui::Button("Clear State"))
+		{
+			calculated = false;
+			result_str = "";
 		}
 
 		float wrap_width = 200.f;
@@ -747,7 +798,7 @@ namespace widgets::EquiLand {
 		ImVec2 marker_min = ImVec2(pos.x + wrap_width, pos.y);
 		ImVec2 marker_max = ImVec2(pos.x + wrap_width + 10, pos.y + ImGui::GetTextLineHeight());
 		ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
-		ImGui::Text(output.data());
+		ImGui::Text(result_str.empty() ? output.data() : result_str.data());
 	}
 
 	template<size_t max_selected = 5>

@@ -21,7 +21,8 @@ void CustomWindow(bool* is_open)
 	ImGui::SetColumnWidth(1, 250.f);
 	ImGui::SetColumnWidth(2, 250.f);
 
-	widgets::EquiLand::RangeSelect();
+	static widgets::EquiLand::CardMatrix range_matrix = {};
+	widgets::EquiLand::RangeSelect(range_matrix);
 	ImGui::NextColumn();
 
 
@@ -31,7 +32,8 @@ void CustomWindow(bool* is_open)
 	ImGui::NextColumn();
 
 	//widgets::EquiLand::DeadCardsSelect();
-	widgets::EquiLand::DeadCardsSelect<2>(dead_cards, true, board_cards);
+	auto& range = range_matrix.range;
+	widgets::EquiLand::DeadCardsSelect<2>(dead_cards, range, true, board_cards);
 	ImGui::NextColumn();
 	ImGui::Columns(1);
 

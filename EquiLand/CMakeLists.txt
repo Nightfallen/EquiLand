@@ -12,13 +12,18 @@ list(APPEND ImGui_Docking_Sources "imgui/imstb_truetype.h" "imgui/imgui_impl_dx1
 list(APPEND ImGui_Docking_Sources "imgui/imgui_impl_win32.cpp" "imgui/imgui_impl_win32.h")
 list(APPEND ImGui_Docking_Sources "imgui/imgui_freetype.cpp" "imgui/imgui_freetype.h")
 
+set(OMPEval_Sources "OMPEval/CardRange.cpp" "OMPEval/CardRange.h" "OMPEval/CombinedRange.cpp")
+list(APPEND OMPEval_Sources "OMPEval/CombinedRange.h" "OMPEval/Constants.h" "OMPEval/EquityCalculator.cpp")
+list(APPEND OMPEval_Sources "OMPEval/EquityCalculator.h" "OMPEval/Hand.h" "OMPEval/HandEvaluator.h")
+list(APPEND OMPEval_Sources "OMPEval/HandEvaluator.cpp" "OMPEval/OffsetTable.hxx" "OMPEval/Random.h" "OMPEval/Util.h")
+
 set(EquiLand_Sources   "EquiLand.cpp" "includes_pch.h" "includes_pch.cpp")
 list(APPEND EquiLand_Sources "source/structures.hpp" "source/gui.hpp" "source/custom_widgets.hpp" "source/Freetype.hpp")
 list(APPEND EquiLand_Sources "source/Settings.hpp"  "source/Application.h" "source/Application.cpp")
 
 #add_executable (EquiLand ${ImGui_Docking_Sources})
 #add_executable (EquiLand "EquiLand.cpp"  "source/Settings.hpp" "includes_pch.h" "includes_pch.cpp")
-add_executable (EquiLand ${ImGui_Docking_Sources} ${EquiLand_Sources})
+add_executable (EquiLand ${ImGui_Docking_Sources} ${EquiLand_Sources} ${OMPEval_Sources})
 #set_property(TARGET EquiLand PROPERTY CXX_STANDARD_REQUIRED 20)
 #find_package(fmt)
 #target_link_libraries(EquiLand PRIVATE fmt::fmt)

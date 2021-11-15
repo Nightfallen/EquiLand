@@ -93,7 +93,9 @@
 #error "Unknown compiler"
 #endif
 #endif
-	
-	 
+
+// These macros causing compiling errors in 'OMPEval'
+#undef max
+#undef min
 
 #endif // !INCLUDES_PCH_H
