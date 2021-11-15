@@ -19,6 +19,35 @@ namespace widgets {
 			ImGui::EndTooltip();
 		}
 	}
+
+	void SelectableColor(ImU32 color)
+	{
+		ImVec2 p_min = ImGui::GetItemRectMin();
+		ImVec2 p_max = ImGui::GetItemRectMax();
+		ImGui::GetWindowDrawList()->AddRectFilled(p_min, p_max, color);
+	}
+
+	bool CustomSelectable(const char* label, bool* p_selected, ImU32 bg_color, ImGuiSelectableFlags flags, const ImVec2& size_arg)
+	{
+		ImDrawList* draw_list = ImGui::GetWindowDrawList();
+		draw_list->ChannelsSplit(2);
+
+		// Channel number is like z-order. Widgets in higher channels are rendered above widgets in lower channels.
+		draw_list->ChannelsSetCurrent(1);
+
+		bool result = ImGui::Selectable(label, p_selected, flags, size_arg);
+
+		if (!ImGui::IsItemHovered() && !ImGui::IsItemActive() && !*p_selected)
+		{
+			// Render background behind Selectable().
+			draw_list->ChannelsSetCurrent(0);
+			SelectableColor(bg_color);
+		}
+
+		// Commit changes.
+		draw_list->ChannelsMerge();
+		return result;
+	}
 }
 
 namespace widgets::EquiLand {
@@ -302,47 +331,10 @@ namespace widgets::EquiLand {
 		return result;
 	}
 
-	void SelectableColor(ImVec2 szSelectable, ImU32 color)
-	{
-		auto& style = ImGui::GetStyle();
-		ImVec2 itemSpacing = style.ItemSpacing;
-		ImVec2 p_min = ImGui::GetCursorScreenPos() - style.FramePadding;
-		// temp workaround to 
-		p_min.y += 1;
-		ImVec2 p_max = p_min + itemSpacing + szSelectable; //ImVec2(p_min.x + ImGui::GetContentRegionAvailWidth(), p_min.y + ImGui::GetFrameHeight());
-		ImGui::GetWindowDrawList()->AddRectFilled(p_min, p_max, color);
-		
-	}
-
-	void SelectableColorEx2(ImVec2 prevCurPos, ImVec2 szSelectable, ImU32 color)
-	{
-		auto& style = ImGui::GetStyle();
-		ImVec2 itemSpacing = style.ItemSpacing;
-		ImVec2 p_min = prevCurPos - style.FramePadding;
-		// temp workaround to 
-		p_min.y += 1;
-		ImVec2 p_max = p_min + itemSpacing + szSelectable; //ImVec2(p_min.x + ImGui::GetContentRegionAvailWidth(), p_min.y + ImGui::GetFrameHeight());
-		//ImGui::GetWindowDrawList()->AddRectFilled(p_min, p_max, color);
-		//ImGui::GetBackgroundDrawList()->AddRectFilled(p_min, p_max, color);
-		ImGui::GetForegroundDrawList()->AddRectFilled(p_min, p_max, color);
-	}
-
-	void SelectableColorEx(ImVec2 xy, ImVec2 min, ImVec2 szSelectable, ImU32 color)
-	{
-		auto& style = ImGui::GetStyle();
-		auto& [x, y] = xy;
-		ImVec2 p_min = min;
-		auto itemSpacing = style.ItemSpacing;
-		p_min.x += y * 40 + y * itemSpacing.y;
-		p_min.y += x * 40 + x * itemSpacing.x;
-		ImVec2 p_max = p_min + szSelectable + style.ItemSpacing;
-		//ImGui::GetWindowDrawList()->AddRectFilled(p_min, p_max, color);
-		ImGui::GetBackgroundDrawList()->AddRectFilled(p_min, p_max, color);
-	}
-
 	struct CardMatrix {
 		bool cards[169] = {};
 		std::string range;
+		auto operator<=>(const CardMatrix&) const = default;
 	};
 	
 	void RangeSelect(CardMatrix& matrix)
@@ -380,28 +372,33 @@ namespace widgets::EquiLand {
 				bool cur_state = selected[13 * x + y];
 				//ImVec2 alignment = ImVec2((float)x / 2.0f, (float)y / 2.0f);
 				std::string postfix = "";
+				ImU32 bg_color = {};
+
+				ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.501, 0, 0.501, 1.00f));
+				ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.501, 0, 0.501, 1.00f));
 				if (x > y)
 				{
 					postfix = "o";
 					//ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.184, 0.019, 1, 1.f));
-					ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.20f, 0.25f, 0.29f, 0.55f));
-					ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.26f, 0.59f, 0.98f, 0.80f));
-					ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.26f, 0.59f, 0.98f, 1.00f));
-
-
+					ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.862, 0.078, 0.235, 0.55f));
+					//ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.26f, 0.59f, 0.98f, 0.80f));
+					//ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.501, 0, 0.501, 1.00f));
+					bg_color = IM_COL32(255, 160, 122, 200);
 				}
 				else if (x != y)
 				{
 					postfix = "s";
 					ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.24f, 0.27f, 0.20f, 1.00f));
-					ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.27f, 0.30f, 0.23f, 1.00f));
-					ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.30f, 0.34f, 0.26f, 1.00f));
+					//ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.27f, 0.30f, 0.23f, 1.00f));
+					//ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.30f, 0.34f, 0.26f, 1.00f));
+					bg_color = IM_COL32(255, 218, 185, 200);
 				}
 				else
 				{
-					ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.501f, 0.501f, 0.f, 0.82f));
-					ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.603, 0.803, 0.196, 0.83f));
-					ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.678f, 1.f, 0.184f, 0.86f));
+					ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0, 0, 0.501, 0.82f));
+					//ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.603, 0.803, 0.196, 0.83f));
+					//ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.678f, 1.f, 0.184f, 0.86f));
+					bg_color = IM_COL32(135, 206, 235, 200);
 				}
 				auto first = rankMap.at(x);
 				auto second = rankMap.at(y);
@@ -411,7 +408,7 @@ namespace widgets::EquiLand {
 				str = std::format("{}{}{}", first, second, postfix);
 				auto flags = ImGuiSelectableFlags_SelectOnClick;
 				auto prevCurPos = ImGui::GetCursorScreenPos();
-				if (ImGui::Selectable(str.data(), &selected[13 * x + y], flags, ImVec2(40, 40)))
+				if (widgets::CustomSelectable(str.data(), &selected[13 * x + y], bg_color, flags, ImVec2(40, 40)))
 				{
 					bool isShiftPressed = io.KeyShift;
 					// Imgui's 'IsKeyPressed' doesn't work properly somewhy
@@ -639,6 +636,7 @@ namespace widgets::EquiLand {
 
 	struct Cards {
 		bool cards[52] = {};
+		auto operator<=>(const Cards&) const = default;
 	};
 
 	auto GetBoardCardsText(const Cards& cards) -> std::vector<std::string>
@@ -749,31 +747,45 @@ namespace widgets::EquiLand {
 		ImGui::Text("Dead Cards:");
 		CardSelection<max_selected>(cards, sync, board);
 		auto result = GetBoardCardsText(cards);
-		
+		static auto prevRange = range;
+		static auto prevCards = cards;
+		static auto prevBoard = board;
+		static bool changed_values = false;
+
 		auto& selectables = cards.cards;
 		if (ImGui::Button("Clear##Dead Cards"))
 		{
 			std::fill(std::begin(selectables), std::end(selectables), 0);
 		}
 
-		static bool calculated = false;
+		bool bHeroHandSelected = result.size() == max_selected;
+		bool board_changed = GetBoardCardsText(board).size() >= 3 && prevBoard != board;
+		if (bHeroHandSelected && (prevRange != range || prevCards != cards || board_changed))
+		{
+			changed_values = true;
+			prevRange = range;
+			prevCards = cards;
+			prevBoard = board;
+		}
+
+		//static bool calculated = false;
 		static std::string result_str;
 
 		std::string output = "Enter two holecards to see their equity vs the range";
-		if (result.size() == max_selected && !calculated)
+		if (bHeroHandSelected && changed_values)
 		{
-			calculated = true;
 			using namespace omp;
 			auto hero_hand = BuildBoardString(cards);
 			auto board_cards = BuildBoardString(board);
 			std::vector<CardRange> ranges2{ range, hero_hand };
 			omp::EquityCalculator equity;
 			uint64_t board_mask = CardRange::getCardMask(board_cards);
-
-			equity.start(ranges2, board_mask, 0, true, 2e-3, nullptr, 0.05f, 0);
+			uint64_t dead_cards = CardRange::getCardMask(hero_hand);
+			
+			equity.start(ranges2, board_mask, 0, true, 0, nullptr, 0.05f, 0);
 			equity.wait();
 			auto res = equity.getResults();
-
+			std::cout << "Number of " << res.evaluations << std::endl;
 			output =
 				"Equity: {:#3.3f} %%\n"
 				"Win:    {:#3.3f} %%\n"
@@ -785,13 +797,10 @@ namespace widgets::EquiLand {
 			float wins_percent = res.wins[1] / (float)total * 100.f;
 			float ties_percent = res.ties[1] / (float)total * 100.f;
 			result_str = std::format(output, eq_percent, wins_percent, ties_percent);
+			changed_values = false;
 		}
 
-		if (ImGui::Button("Clear State"))
-		{
-			calculated = false;
-			result_str = "";
-		}
+	
 
 		float wrap_width = 200.f;
 		ImVec2 pos = ImGui::GetCursorScreenPos();
