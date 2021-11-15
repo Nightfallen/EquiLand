@@ -553,6 +553,7 @@ namespace widgets::EquiLand {
 		static size_t szArr = 0;
 		auto szButton = ImVec2(20, 20);
 
+		ImGui::Text("Board Select:");
 		bool separator = false;
 		for (auto&& card : boards_cards)
 		{
@@ -626,6 +627,154 @@ namespace widgets::EquiLand {
 
 	}
 
+	struct Cards {
+		bool cards[52] = {};
+	};
+
+	auto GetBoardCardsText(const Cards& cards) -> std::vector<std::string>
+	{
+		const std::unordered_map<int, char> rankMap = {
+		   {0, 'A'}, {1, 'K'}, {2, 'Q'}, {3, 'J'}, {4, 'T'}, {5, '9'},
+		   {6, '8'}, {7, '7'},   {8, '6'}, {9, '5'}, {10, '4'},  {11, '3'}, {12, '2'}
+		};
+		const char suits[4] = { 'h', 'c', 'd', 's' };
+
+		std::vector<std::string> result;
+		const auto& selectables = cards.cards;
+		for (int y = 0; y < 13; ++y)
+		{
+			auto& card = rankMap.at(y);
+			for (int x = 0; x < 4; ++x)
+			{
+				auto& suit = suits[x];
+				if (selectables[13 * x + y])
+					result.push_back(std::format("{}{}", card, suit));
+			}
+		}
+		return result;
+	}
+
+	template<size_t max_selected = 5>
+	std::string CardSelection(Cards& cards, bool sync, Cards& another_cards)
+	{
+		const std::unordered_map<int, char> rankMap = {
+		{0, 'A'}, {1, 'K'}, {2, 'Q'}, {3, 'J'}, {4, 'T'}, {5, '9'},
+		{6, '8'}, {7, '7'},   {8, '6'}, {9, '5'}, {10, '4'},  {11, '3'}, {12, '2'}
+		};
+		const char suits[4] = { 'h', 'c', 'd', 's' };
+		auto& selectables		= cards.cards;
+		auto& other_selectables = another_cards.cards;
+		std::array<std::string, max_selected> hero_hand = {};
+		size_t szArr = std::count(std::begin(selectables), std::end(selectables), 1);
+		size_t szAnotArr = std::count(std::begin(other_selectables), std::end(other_selectables), 1);
+		bool are_disabled = (szArr == hero_hand.size()) ? true : false;
+		bool separator = false;
+
+		for (int y = 0; y < 13; ++y)
+		{
+			auto& card = rankMap.at(y);
+			for (int x = 0; x < 4; ++x)
+			{
+				auto& suit = suits[x];
+				if (separator) ImGui::SameLine();
+				auto label = std::format("{}{}", card, suit);
+
+				bool disabled_helper = are_disabled && !(selectables[13 * x + y]) || (sync && other_selectables[13 * x + y]);
+				ImGui::BeginDisabled(disabled_helper);
+				auto flags = ImGuiSelectableFlags_SelectOnClick;
+				auto prev_value = selectables[13 * x + y];
+				auto& cur_value = selectables[13 * x + y];
+				if (ImGui::Selectable(label.data(), &selectables[13 * x + y], flags, ImVec2(40, 40)))
+				{
+					bool value_changed = prev_value && !cur_value;
+					auto label_prev = std::format("{}{}", card, suit);
+					if (value_changed)
+					{
+						--szArr;
+						for (int k = 0; k < hero_hand.size(); ++k)
+						{
+							auto& cur_str = hero_hand[k];
+							if (cur_str.find(label_prev) != std::string::npos)
+							{
+								cur_str = "";
+								for (int ijk = k; ijk < hero_hand.size() - 1; ++ijk)
+								{
+									hero_hand[ijk] = hero_hand[ijk + 1];
+								}
+								hero_hand[szArr] = "";
+							}
+						}
+					}
+					else if (szArr != hero_hand.size())
+						hero_hand[szArr++] = label;
+				}
+				ImGui::EndDisabled();
+				separator = true;
+			}
+			separator = false;
+		}
+
+		std::string result;
+
+
+		return result;
+	}
+
+	template<size_t max_selected = 5>
+	void DeadCardsSelect(Cards& cards, bool sync = false, Cards& board = Cards())
+	{
+		ImGui::Text("Dead Cards:");
+		CardSelection<max_selected>(cards, sync, board);
+		auto result = GetBoardCardsText(cards);
+		
+		auto& selectables = cards.cards;
+		if (ImGui::Button("Clear##Dead Cards"))
+		{
+			std::fill(std::begin(selectables), std::end(selectables), 0);
+		}
+
+		std::string output = "Enter two holecards to see their equity vs the range";
+		if (result.size() == max_selected)
+		{
+			output =
+				"Equity: 50 %%\n"
+				"Win:    45 %%\n"
+				"Tie:    5 %%";
+		}
+
+		float wrap_width = 200.f;
+		ImVec2 pos = ImGui::GetCursorScreenPos();
+		ImVec2 marker_min = ImVec2(pos.x + wrap_width, pos.y);
+		ImVec2 marker_max = ImVec2(pos.x + wrap_width + 10, pos.y + ImGui::GetTextLineHeight());
+		ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
+		ImGui::Text(output.data());
+	}
+
+	template<size_t max_selected = 5>
+	void BoardSelect(Cards& cards, bool sync = false, Cards& board = Cards())
+	{
+		auto boards_cards = GetBoardCardsText(cards);
+		auto& selectables = cards.cards;
+		ImGui::Text("Board Select:");
+		bool separator = false;
+		auto szButton = ImVec2(20, 20);
+
+		for (int i = 0; i < max_selected; ++i)
+		{
+			std::string label = (boards_cards.size() > i) ? boards_cards[i] : "";
+			if (separator) ImGui::SameLine();
+			ImGui::Button(label.data(), szButton);
+			separator = true;
+		}
+
+		CardSelection<max_selected>(cards, sync, board);
+
+		if (ImGui::Button("Clear##Board"))
+		{
+			std::fill(std::begin(selectables), std::end(selectables), 0);
+		}
+	}
+
 	void DeadCardsSelect()
 	{
 		const std::unordered_map<int, char> rankMap = {
@@ -642,6 +791,7 @@ namespace widgets::EquiLand {
 		bool separator = false;
 		static bool are_disabled = false;
 
+		ImGui::Text("Dead Cards:");
 		for (int y = 0; y < 13; ++y)
 		{
 			auto& card = rankMap.at(y);
@@ -698,8 +848,23 @@ namespace widgets::EquiLand {
 			are_disabled = false;
 			std::fill(std::begin(selectables), std::end(selectables), 0);
 		}
-	}
 
+		std::string output = "Enter two holecards to see their equity vs the range";
+		if (szArr == hero_hand.size())
+		{
+			output =
+				"Equity: 50 %%\n"
+				"Win:    45 %%\n"
+				"Tie:    5 %%";
+		}
+
+		float wrap_width = 200.f;
+		ImVec2 pos = ImGui::GetCursorScreenPos();
+		ImVec2 marker_min = ImVec2(pos.x + wrap_width, pos.y);
+		ImVec2 marker_max = ImVec2(pos.x + wrap_width + 10, pos.y + ImGui::GetTextLineHeight());
+		ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
+		ImGui::Text(output.data());
+	}
 }
 
 #endif // !SOURCE_CUSTOM_WIDGETS_HPP

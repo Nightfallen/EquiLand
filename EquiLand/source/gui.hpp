@@ -14,7 +14,7 @@ void CustomWindow(bool* is_open)
 		ImGui::SetNextWindowSize({1400.f, 800.f});
 		only_once = false;
 	}
-	ImGui::Begin("EquiLand");
+	ImGui::Begin("EquiLand",is_open);
 	ImGui::Text("Something coming soon...");
 	ImGui::Columns(3, "##main_ui", false);
 
@@ -25,10 +25,14 @@ void CustomWindow(bool* is_open)
 	widgets::EquiLand::RangeSelect();
 	ImGui::NextColumn();
 
-	widgets::EquiLand::BoardSelect();
+
+	static widgets::EquiLand::Cards dead_cards = {};
+	static widgets::EquiLand::Cards board_cards = {};
+	widgets::EquiLand::BoardSelect<5>(board_cards, true, dead_cards);
 	ImGui::NextColumn();
 
-	widgets::EquiLand::DeadCardsSelect();
+	//widgets::EquiLand::DeadCardsSelect();
+	widgets::EquiLand::DeadCardsSelect<2>(dead_cards, true, board_cards);
 	ImGui::NextColumn();
 	ImGui::Columns(1);
 
@@ -105,6 +109,8 @@ void UI_HANDLER(HWND hwnd)
 	if (!show_demo_window)
 		PostMessage(hwnd, WM_CLOSE, 0, 0);
 	ImGui::ShowDemoWindow(&show_demo_window);
+	if (!show_equiland_window)
+		PostMessage(hwnd, WM_CLOSE, 0, 0);
 	CustomWindow(&show_equiland_window);
 	MyImguiWindow(&show_temp_window);
 }
