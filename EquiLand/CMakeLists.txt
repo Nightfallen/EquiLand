@@ -27,6 +27,9 @@ find_package(freetype REQUIRED)
 target_link_libraries(EquiLand PRIVATE ${FREETYPE_LIBRARIES})
 target_include_directories(EquiLand PRIVATE ${FREETYPE_INCLUDE_DIRS})
 
+find_package(libdivide REQUIRED)
+target_link_libraries(EquiLand PRIVATE libdivide::libdivide)
+
 target_link_libraries(EquiLand PRIVATE libpeval)
 
 target_precompile_headers(EquiLand PRIVATE "includes_pch.h")

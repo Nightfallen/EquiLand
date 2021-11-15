@@ -5,7 +5,6 @@
 #include <source/custom_widgets.hpp>
 
 
-
 void CustomWindow(bool* is_open)
 {
 	static bool only_once = true;
