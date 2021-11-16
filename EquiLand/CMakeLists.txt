@@ -20,7 +20,7 @@ list(APPEND OMPEval_Sources "OMPEval/HandEvaluator.cpp" "OMPEval/OffsetTable.hxx
 set(		EquiLand_Sources "EquiLand.cpp" "includes_pch.h" "includes_pch.cpp")
 list(APPEND EquiLand_Sources "source/structures.hpp" "source/gui.hpp" "source/custom_widgets.hpp" "source/Freetype.hpp")
 list(APPEND EquiLand_Sources "source/Settings.hpp"  "source/Application.h" "source/Application.cpp")
-list(APPEND EquiLand_Sources "source/Styles.hpp")
+list(APPEND EquiLand_Sources "source/Styles.hpp" "source/Fonts.hpp" "source/Notifications.hpp")
 
 set(		EquiLand_Fonts_Sources "fonts/DefinesFontAwesome.hpp" "fonts/BinaryFontAwesome.hpp")
 list(APPEND EquiLand_Fonts_Sources "fonts/BinaryFontRoboto.hpp")
@@ -28,8 +28,15 @@ list(APPEND EquiLand_Fonts_Sources "fonts/BinaryFontRoboto.hpp")
 set(		EquiLand_Project_Sources ${ImGui_Docking_Sources} ${EquiLand_Sources} ${OMPEval_Sources})
 list(APPEND EquiLand_Project_Sources ${EquiLand_Fonts_Sources})
 
-# Linking all sources
-add_executable (EquiLand ${EquiLand_Project_Sources} "source/Fonts.hpp")
+# disable warnings from imgui
+set_source_files_properties(
+  ${ImGui_Docking_Sources}
+  PROPERTIES
+  COMPILE_FLAGS "-w"
+)
+
+# LiStarted implementing Notificationsnking all sources
+add_executable (EquiLand ${EquiLand_Project_Sources})
 
 # External libraries handling
 find_package(freetype REQUIRED)

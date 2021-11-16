@@ -3,6 +3,7 @@
 
 #include <includes_pch.h>
 
+#include <fonts/DefinesFontAwesome.hpp>
 #include "OMPEval/HandEvaluator.h"
 #include "OMPEval/EquityCalculator.h"
 
@@ -786,7 +787,7 @@ namespace widgets::EquiLand {
 		{
 			for (int y = 0; y < nMax; ++y)
 			{
-				if (arr[13 * y + x] == true)
+				if ((bool)arr[13 * y + x] == true)
 				{
 					std::string suit = "";
 					if (x < y) 
@@ -1638,7 +1639,16 @@ namespace widgets::EquiLand {
 	void TreeRangeEditor()
 	{
 		// Buttons to add/delete headers
-		const char* edit_buttons[] = {"Some Icon"};
+		const char* edit_buttons[] = { ICON_FA_PLUS_CIRCLE, ICON_FA_FILE, ICON_FA_LIST };
+		size_t sz_Arr = ARRAYSIZE(edit_buttons);
+
+		bool separator = false;
+		for (int i = 0; i < sz_Arr; ++i)
+		{
+			if (separator) ImGui::SameLine();
+			ImGui::Button(edit_buttons[i]);
+			separator = true;
+		}
 
 		ImGuiTreeNodeFlags base_flags = ImGuiTreeNodeFlags_SpanFullWidth;
 		if (ImGui::CollapsingHeader("Default Ranges", ImGuiTreeNodeFlags_None))

@@ -3,6 +3,8 @@
 
 #include <includes_pch.h>
 #include <source/custom_widgets.hpp>
+#include <fonts/DefinesFontAwesome.hpp>
+#include <source/Notifications.hpp>
 
 bool PopupAbout(bool* is_open)
 {
@@ -16,7 +18,7 @@ bool PopupAbout(bool* is_open)
 		if (widgets::HyperLinkText("Github Page", "https://github.com/Nightfallen/EquiLand", clicked))
 			clicked = true;
 
-		if (ImGui::IsKeyPressed(ImGuiKey_Escape))
+		if (ImGui::IsKeyPressed(VK_ESCAPE))
 			*is_open = false;
 		ImGui::EndPopup();
 	}
@@ -29,6 +31,8 @@ bool PopupSettings(bool* is_open)
 	ImGui::SetNextWindowSize({ 600.f, 650.f });
 	if (ImGui::BeginPopupModal("Settings", is_open, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize))
 	{
+		auto& io = ImGui::GetIO();
+		auto& style = ImGui::GetStyle();
 		ImGui::Text("EquiLand settings:");
 
 		ImGui::Text("Equity Calculation Settings:");
@@ -86,7 +90,13 @@ bool PopupSettings(bool* is_open)
 		widgets::public_untested::AnimatedButton("Cool button to apply settings");
 
 		//if (ImGui::Button("msg box"))
-			widgets::AltMessageBox();
+		widgets::AltMessageBox();
+		
+		if (io.KeysDown[VK_ESCAPE])
+		{
+			*is_open = false;
+			ImGui::CloseCurrentPopup();
+		}
 
 		ImGui::EndPopup();
 	}
@@ -96,6 +106,26 @@ bool PopupSettings(bool* is_open)
 bool PopupUpdate(bool* is_open)
 {
 	bool result = true;
+	return result;
+}
+
+std::string MenuItemText(std::string_view text, std::string_view icon = ICON_FA_AMAZON)
+{
+	auto szIcon = ImGui::CalcTextSize(icon.data());
+	auto szSpace = ImGui::CalcTextSize(" ");
+	int spaces = 0;
+
+	while (szSpace.x < szIcon.x * 2)
+	{
+		++spaces;
+		szSpace.x += szSpace.x;
+	}
+
+	std::string result;
+	result.append(icon);
+	while (spaces--)
+		result.append(" ");
+	result.append(text);
 	return result;
 }
 
@@ -111,16 +141,16 @@ void CustomWindow(bool* is_open)
 	{
 		if (ImGui::BeginMenu("File##my_file"))
 		{
-			if (ImGui::MenuItem("Import Ranges", "CTRL+I")) {}
+			if (ImGui::MenuItemEx("Import Ranges", ICON_FA_FILE, "CTRL+I")) {}
 			ImGui::Separator();
-			if (ImGui::MenuItem("Exit##exit", "ALT+F4")) {}
+			if (ImGui::MenuItemEx("Exit##exit", ICON_FA_TIMES_CIRCLE, "ALT+F4")) {}
 			ImGui::EndMenu();
 		}
 		if (ImGui::BeginMenu("Tools##my_tools"))
 		{
 			if (ImGui::MenuItem("Quiz")) {}
 			ImGui::Separator();
-			if (ImGui::MenuItem("Options", "CTRL+P")) 
+			if (ImGui::MenuItemEx("Options", ICON_FA_COG, "CTRL+P"))
 			{
 				popup_settings = true;
 			}
@@ -130,7 +160,7 @@ void CustomWindow(bool* is_open)
 
 		if (ImGui::BeginMenu("Help"))
 		{
-			if (ImGui::MenuItem("About"))
+			if (ImGui::MenuItemEx("About", ICON_FA_INFO))
 			{
 				popup = true;
 			}
@@ -200,6 +230,14 @@ void CustomWindow(bool* is_open)
 
 	static widgets::EquiLand::CardMatrix range_matrix = {};
 	widgets::EquiLand::RangeSelect(range_matrix);
+	static bool test = false;
+
+	if (ImGui::Button("Test notify"))
+	{
+		test = true;
+	}
+	Notify(&test, "Downloading", "Update is being downloaded");
+
 	ImGui::NextColumn();
 
 
