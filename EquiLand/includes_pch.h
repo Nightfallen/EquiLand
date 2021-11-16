@@ -44,7 +44,8 @@
 // Imgui's backends are included below in the 'OS dependent' section
 
 // Vcpkg headers
-// Coming soon...
+#include <ft2build.h>
+#include <libdivide.h>
 
 // Debug options
 #if defined(_DEBUG)
@@ -70,7 +71,7 @@
 	#ifdef _WIN64
 	#else
 	#endif
-// #TODO: Support of other OS'es
+// #TODO: Support of other OS'es, at least Linux and MacOS
 #elif !defined(_WIN32)
 #error "Only Windows platform is supported"
 #elif __APPLE__	
@@ -97,5 +98,10 @@
 // These macros causing compiling errors in 'OMPEval'
 #undef max
 #undef min
+
+// Project files that aren't changed frequently or at all
+#include <fonts/BinaryFontAwesome.hpp>
+#include <fonts/BinaryFontRoboto.hpp>
+#include <fonts/DefinesFontAwesome.hpp>
 
 #endif // !INCLUDES_PCH_H
