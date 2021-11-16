@@ -26,7 +26,6 @@ struct FreetypeTest
 		atlas->FontBuilderIO = ImGuiFreeType::GetBuilderForFreeType();
 		atlas->FontBuilderFlags = FreeTypeBuilderFlags;
 
-
 		atlas->Build();
 		WantRebuild = false;
 		return true;

@@ -6,6 +6,387 @@
 #include "OMPEval/HandEvaluator.h"
 #include "OMPEval/EquityCalculator.h"
 
+// Untested code of imgui widgets i found searching the net
+// Need to rework them or discard if they won't be needed in the future
+namespace widgets::public_untested {
+
+	// I fount it on the net, very good idea
+	// But i need to reimplement it to understand how it works 
+	// And also redesign it to not using 'Imgui::Begin()' and 'ImGui::End()' functions,
+	// cause it's very confusing, there are 
+	// 
+	bool AnimatedSlider(const char* label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags)
+	{
+		// This widget doesn't calculate frame_bb with the 'label' impact
+		// Temp workaround
+		ImGui::InvisibleButton(std::format("##11{}", label).data(), ImGui::CalcTextSize(label));
+		using namespace ImGui;
+
+		static std::map<ImGuiID, float> padding_anim;
+
+		ImGuiWindow* window = GetCurrentWindow();
+		if (window->SkipItems)
+			return false;
+
+		ImGuiContext& g = *GImGui;
+		const ImGuiStyle& style = g.Style;
+		const ImGuiID id = window->GetID(label);
+		const float w = CalcItemWidth();
+
+		const ImVec2 label_size = CalcTextSize(label, NULL, true);
+
+		const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, label_size.y + style.FramePadding.y * 2.0f));
+		const ImRect total_bb(frame_bb.Min - ImVec2(0, label_size.y + style.ItemInnerSpacing.y), frame_bb.Max);
+
+		ItemSize(total_bb, style.FramePadding.y);
+		if (!ItemAdd(total_bb, id, &frame_bb))
+			return false;
+
+		// Tabbing or CTRL-clicking on Slider turns it into an input box
+		const bool hovered = ItemHoverable(frame_bb, id);
+		const bool hovered_plus = ItemHoverable(total_bb, id);
+
+		const bool temp_input_allowed = false;
+		bool temp_input_is_active = temp_input_allowed && TempInputIsActive(id);
+		if (!temp_input_is_active)
+		{
+
+			const bool focus_requested = temp_input_allowed && FocusableItemRegister(window, id);
+			const bool clicked = (hovered && g.IO.MouseClicked[0]);
+			//if (focus_requested || clicked || g.NavActivateId == id || g.NavInputId == id)
+			if (focus_requested || clicked || g.NavActivateId == id || g.ActiveIdUsingNavInputMask == id)
+			{
+				SetActiveID(id, window);
+				SetFocusID(id, window);
+				FocusWindow(window);
+				g.ActiveIdUsingNavDirMask |= (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right);
+				//if (temp_input_allowed && (focus_requested || (clicked && g.IO.KeyCtrl) || g.NavInputId == id))
+				if (temp_input_allowed && (focus_requested || (clicked && g.IO.KeyCtrl) || g.ActiveIdUsingNavInputMask == id))
+				{
+					temp_input_is_active = true;
+					FocusableItemUnregister(window);
+				}
+			}
+		}
+
+		if (temp_input_is_active)
+		{
+			// Only clamp CTRL+Click input when ImGuiSliderFlags_AlwaysClamp is set
+			const bool is_clamp_input = (flags & ImGuiSliderFlags_AlwaysClamp) != 0;
+			return TempInputScalar(frame_bb, id, label, data_type, p_data, format, is_clamp_input ? p_min : NULL, is_clamp_input ? p_max : NULL);
+		}
+
+		// Draw frame
+		const ImU32 frame_col = GetColorU32(ImGuiCol_FrameBg);
+		RenderFrame(frame_bb.Min, frame_bb.Max, frame_col, true, g.Style.FrameRounding);
+
+		// Slider behavior
+		ImRect grab_bb;
+		const bool value_changed = SliderBehavior(frame_bb, id, data_type, p_data, p_min, p_max, format, flags, &grab_bb);
+		if (value_changed)
+			MarkItemEdited(id);
+
+		auto color_frame = style.Colors[ImGuiCol_FrameBg];
+		if (grab_bb.Max.x > grab_bb.Min.x)
+			RenderFrame(frame_bb.Min, ImVec2(grab_bb.Max.x, frame_bb.Max.y), GetColorU32(color_frame), true, g.Style.FrameRounding);
+
+		// Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
+		char value_buf[64];
+		const char* value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_ARRAYSIZE(value_buf), data_type, p_data, format);
+
+		// label
+		if (label_size.x > 0)
+			RenderText(ImVec2(frame_bb.Min.x, frame_bb.Min.y - style.ItemInnerSpacing.y - label_size.y), label);
+
+		// value size
+		const ImVec2 value_size = CalcTextSize(value_buf, value_buf_end, true);
+
+		auto it_padding = padding_anim.find(id);
+		if (it_padding == padding_anim.end())
+		{
+			padding_anim.insert({ id, {0.f} });
+			it_padding = padding_anim.find(id);
+		}
+
+		it_padding->second = ImClamp(it_padding->second + (2.5f * GetIO().DeltaTime * (hovered_plus || GetActiveID() == id ? 1.f : -1.f)), 0.f, 1.f);
+
+		// value
+		if (value_size.x > 0.0f && it_padding->second > 0.f)
+		{
+			auto value_col = GetColorU32(ImGuiCol_FrameBg, it_padding->second);
+			PushStyleVar(ImGuiStyleVar_Alpha, it_padding->second);
+
+			char window_name[16];
+			ImFormatString(window_name, IM_ARRAYSIZE(window_name), "##tp_%s", label);
+
+			SetNextWindowPos(frame_bb.Max - ImVec2(frame_bb.Max.x - frame_bb.Min.x, 0) / 2 - ImVec2(value_size.x / 2 + 3.f, 0.f));
+			SetNextWindowSize((frame_bb.Max - ImVec2(frame_bb.Max.x - frame_bb.Min.x, 0) / 2 + ImVec2(value_size.x / 2 + 3.f, value_size.y + 6)) - (frame_bb.Max - ImVec2(frame_bb.Max.x - frame_bb.Min.x, 0) / 2 - ImVec2(value_size.x / 2 + 3.f, 0.f)));
+			SetNextWindowBgAlpha(it_padding->second);
+
+			ImGuiWindowFlags flags = ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove |
+				ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration;
+
+			Begin(window_name, NULL, flags);
+
+			RenderFrame(frame_bb.Min + ImVec2(0.f, (frame_bb.Max.y - frame_bb.Min.y)), frame_bb.Min + ImVec2((frame_bb.Max.x - frame_bb.Min.x), (frame_bb.Max.y - frame_bb.Min.y) + value_size.y + 6), GetColorU32(ImGuiCol_FrameBg), GetStyle().WindowRounding);
+			RenderTextClipped(frame_bb.Min + ImVec2(0.f, (frame_bb.Max.y - frame_bb.Min.y)), frame_bb.Min + ImVec2((frame_bb.Max.x - frame_bb.Min.x), (frame_bb.Max.y - frame_bb.Min.y) + value_size.y + 6), value_buf, value_buf_end, NULL, ImVec2(0.5f, 0.5f));
+
+			End();
+
+			PopStyleVar();
+		}
+		return value_changed;
+	}
+
+	struct animation {
+		bool clicked;
+		bool reverse;
+		float size;
+		float mult;
+	};
+
+	bool AnimatedCheckbox(const char* label, bool* value)
+	{
+		using namespace ImGui;
+		auto name = label;
+		auto callback = value;
+		// callback == v
+		// name == label
+		static std::map<ImGuiID, animation> circle_anim;
+
+		ImGuiWindow* window = GetCurrentWindow();
+		if (window->SkipItems)
+			return false;
+
+		ImGuiContext& g = *GImGui;
+		const ImGuiStyle& style = g.Style;
+		const ImGuiID id = window->GetID(name);
+		const ImVec2 label_size = CalcTextSize(name, NULL, true);
+
+		const float square_sz = GetFrameHeight();
+		const ImVec2 pos = window->DC.CursorPos;
+		const ImRect total_bb(pos, pos + ImVec2(square_sz + (label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f), label_size.y + style.FramePadding.y * 2.0f));
+		ItemSize(total_bb, style.FramePadding.y);
+		if (!ItemAdd(total_bb, id))
+			return false;
+
+		bool hovered, held;
+		bool pressed = ButtonBehavior(total_bb, id, &hovered, &held);
+		if (pressed)
+		{
+			*callback = !(*callback);
+			MarkItemEdited(id);
+		}
+
+		const ImRect check_bb(pos, pos + ImVec2(square_sz, square_sz));
+
+		RenderFrame(check_bb.Min, check_bb.Max, GetColorU32(ImGuiCol_FrameBg), true, style.FrameRounding);
+		ImU32 check_col = GetColorU32(ImGuiCol_CheckMark);
+
+		float radius = square_sz * 0.82f;
+		auto it_circle = circle_anim.find(id);
+		if (it_circle == circle_anim.end())
+		{
+			circle_anim.insert({ id, {false, false, 0.f, 0.f} });
+			it_circle = circle_anim.find(id);
+		}
+
+		if (pressed && *callback)
+			it_circle->second.clicked = true;
+		else if (pressed && !(*callback) && it_circle->second.clicked)
+		{
+			it_circle->second.mult = 0.f;
+			it_circle->second.size = 0.f;
+
+			it_circle->second.reverse = false;
+			it_circle->second.clicked = false;
+		}
+
+		if (it_circle->second.clicked)
+		{
+			if (!it_circle->second.reverse)
+			{
+				it_circle->second.size = ImClamp(it_circle->second.size + 3.f * GetIO().DeltaTime, 0.f, 1.f);
+				it_circle->second.mult = ImClamp(it_circle->second.mult + 6.f * GetIO().DeltaTime, 0.f, 1.f);
+
+				if (it_circle->second.mult >= 0.99f)
+					it_circle->second.reverse = true;
+			}
+			else
+			{
+				it_circle->second.size = ImClamp(it_circle->second.size + 3.f * GetIO().DeltaTime, 0.f, 1.f);
+				it_circle->second.mult = ImClamp(it_circle->second.mult - 6.f * GetIO().DeltaTime, 0.f, 1.f);
+
+				if (it_circle->second.mult <= 0.01f)
+				{
+					it_circle->second.mult = 0.f;
+					it_circle->second.size = 0.f;
+
+					it_circle->second.reverse = false;
+					it_circle->second.clicked = false;
+				}
+
+			}
+		}
+
+
+		if (*callback)
+		{
+			auto color = style.Colors[ImGuiCol_FrameBg];
+			RenderFrame(check_bb.Min, check_bb.Max, GetColorU32(color), true, style.FrameRounding);
+
+			const float pad = ImMax(1.0f, IM_FLOOR(square_sz / 5.f));
+			RenderCheckMark(window->DrawList, check_bb.Min + ImVec2(pad, pad), check_col, square_sz - pad * 2.0f);
+		}
+
+		ImU32 circle_col = GetColorU32(ImGuiCol_CheckMark, it_circle->second.mult * 0.7f);
+
+		if (it_circle->second.mult > 0.01f)
+			window->DrawList->AddCircleFilled(ImVec2(check_bb.Min.x + (check_bb.Max.x - check_bb.Min.x) / 2, check_bb.Min.y + (check_bb.Max.y - check_bb.Min.y) / 2), radius * it_circle->second.size, circle_col, 30);
+
+		// Better use clipped text (aligns and some else..)
+		if (label_size.x > 0.0f)
+			RenderText(ImVec2(check_bb.Max.x + style.ItemInnerSpacing.x, check_bb.Min.y + ((check_bb.Max.y - check_bb.Min.y) / 2) - label_size.y / 2 - 1), name);
+
+		return pressed;
+	}
+
+	struct button_animation {
+		bool clicked;
+		bool reverse;
+		float size;
+		float mult;
+		ImVec2 pos;
+	};
+
+	bool AnimatedButton(const char* label, ImVec2 size_arg = ImVec2(0, 0))
+	{
+		using namespace ImGui;
+		auto name = label;
+		auto a_size = size_arg;
+		// name == label
+
+		static std::map<ImGuiID, button_animation> button_circle;
+		static std::map<ImGuiID, float> button_hover;
+
+		ImGuiWindow* window = GetCurrentWindow();
+		if (window->SkipItems)
+			return false;
+
+		ImGuiContext& g = *GImGui;
+		const ImGuiStyle& style = g.Style;
+		const ImGuiID id = window->GetID(name);
+		const ImVec2 label_size = CalcTextSize(name, NULL, true);
+
+		ImVec2 pos = window->DC.CursorPos;
+		ImVec2 size = CalcItemSize(a_size, label_size.x + style.FramePadding.x * 2.0f, label_size.y + style.FramePadding.y * 2.0f);
+
+		const ImRect bb(pos, pos + size);
+		ItemSize(size, style.FramePadding.y);
+		if (!ItemAdd(bb, id))
+			return false;
+
+		bool hovered, held;
+		bool pressed = ButtonBehavior(bb, id, &hovered, &held, 0);
+
+		// Render
+		const ImU32 col = GetColorU32(ImGuiCol_Button);
+		RenderFrame(bb.Min, bb.Max, col, true, style.FrameRounding);
+
+		// Press button animation (Drawing circle in clipped area)
+		auto it_circle = button_circle.find(id);
+		if (it_circle == button_circle.end())
+		{
+			button_circle.insert({ id, {false, false, 0.f, 0.f, ImVec2(0, 0)} });
+			it_circle = button_circle.find(id);
+		}
+
+		// If pressed and wasn't active - start animation
+		if (pressed && !it_circle->second.clicked)
+		{
+			it_circle->second.clicked = true;
+			it_circle->second.pos = GetIO().MousePos;
+		}
+
+		// If pressed and was active - restart animation
+		else if (pressed && it_circle->second.clicked)
+		{
+			it_circle->second.mult = 0.f;
+			it_circle->second.size = 0.f;
+
+			it_circle->second.reverse = false;
+			it_circle->second.clicked = true;
+
+			it_circle->second.pos = GetIO().MousePos;
+		}
+
+		// If we have active animation - procedure it
+		if (it_circle->second.clicked)
+		{
+			// First stage - size(+) alpha(-)
+			if (!it_circle->second.reverse)
+			{
+				it_circle->second.size = ImClamp(it_circle->second.size + 1.5f * GetIO().DeltaTime, 0.f, 1.f);
+				it_circle->second.mult = ImClamp(it_circle->second.mult + 2.f * GetIO().DeltaTime, 0.f, 1.f);
+
+				// Go for the second stage
+				if (it_circle->second.mult >= 0.99f)
+					it_circle->second.reverse = true;
+			}
+
+			// Second stage - size(+) alpha(-)
+			else
+			{
+				it_circle->second.size = ImClamp(it_circle->second.size + 1.5f * GetIO().DeltaTime, 0.f, 1.f);
+				it_circle->second.mult = ImClamp(it_circle->second.mult - 2.f * GetIO().DeltaTime, 0.f, 1.f);
+
+				// Stop animation
+				if (it_circle->second.mult <= 0.01f)
+				{
+					it_circle->second.mult = 0.f;
+					it_circle->second.size = 0.f;
+
+					it_circle->second.reverse = false;
+					it_circle->second.clicked = false;
+				}
+
+			}
+		}
+
+		// Animated circle (on-press animation) color
+		ImVec4 circle_color = ImVec4(0.98f, 0.98f, 0.98f, it_circle->second.mult * 0.6f);
+
+		// Circle radius calcalution
+		float radius = ImMax(fabs(it_circle->second.pos.x - bb.Max.x), fabs(it_circle->second.pos.x - bb.Min.x)) * 2.f;
+
+		// Clip area to draw a cicrle inside frame
+		window->DrawList->PushClipRect(bb.Min, bb.Max);
+		window->DrawList->AddCircleFilled(it_circle->second.pos, radius * it_circle->second.size, GetColorU32(circle_color), 30);
+		window->DrawList->PopClipRect();
+
+		// hover animation
+		auto it_hover = button_hover.find(id);
+		if (it_hover == button_hover.end())
+		{
+			button_hover.insert({ id, {0.f} });
+			it_hover = button_hover.find(id);
+		}
+
+		it_hover->second = ImClamp(it_hover->second + 2.5f * GetIO().DeltaTime * (hovered ? 1.f : -1.f), 0.f, 1.f);
+
+		ImVec4 hovering_color = ImVec4(0.98f, 0.98f, 0.98f, it_hover->second * 0.4f);
+
+		window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(hovering_color), GetStyle().FrameRounding);
+
+		ImGui::RenderTextClipped(bb.Min + style.FramePadding, bb.Max - style.FramePadding, name, NULL, &label_size, style.ButtonTextAlign, &bb);
+
+		return pressed;
+
+
+	}
+
+}
+
 namespace widgets {
 	static void HelpMarker(const char* desc)
 	{
@@ -20,6 +401,167 @@ namespace widgets {
 		}
 	}
 
+	bool HyperLinkText(std::string_view label, std::string_view link, bool was_clicked = false)
+	{
+		ImVec4 color = was_clicked ? ImVec4{ 0.294, 0, 0.509, 0.8 } : ImVec4{ 0, 0, 0.803, 0.8 };
+		ImGui::PushStyleColor(ImGuiCol_Text, color);
+		ImGui::Text(label.data());
+		ImGui::PopStyleColor();
+
+		if (ImGui::IsItemHovered())
+		{
+			if (ImGui::IsMouseClicked(0))
+			{
+				system(std::format("start {}", link).data());
+				return true;
+			}
+			ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+			ImGui::SetTooltip("Open link in browser");
+		}
+		return false;
+	}
+
+	void ToggleButton(const char* str_id, bool* v)
+	{
+		ImVec2 p = ImGui::GetCursorScreenPos();
+		ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+		float height = ImGui::GetFrameHeight();
+		float width = height * 2.f;
+		float radius = height * 0.50f;
+
+		ImGui::InvisibleButton(str_id, ImVec2(width, height));
+		if (ImGui::IsItemClicked())
+			*v = !*v;
+
+		float t = *v ? 1.0f : 0.0f;
+
+		ImGuiContext& g = *GImGui;
+		float ANIM_SPEED = 0.08f;
+		if (g.LastActiveId == g.CurrentWindow->GetID(str_id))// && g.LastActiveIdTimer < ANIM_SPEED)
+		{
+			float t_anim = ImSaturate(g.LastActiveIdTimer / ANIM_SPEED);
+			t = *v ? (t_anim) : (1.0f - t_anim);
+		}
+
+		ImU32 col_bg;
+		if (ImGui::IsItemHovered())
+			col_bg = ImGui::GetColorU32(ImLerp(ImVec4(0.78f, 0.78f, 0.78f, 1.0f), ImVec4(0.64f, 0.83f, 0.34f, 1.0f), t));
+		else
+			col_bg = ImGui::GetColorU32(ImLerp(ImVec4(0.85f, 0.85f, 0.85f, 1.0f), ImVec4(0.56f, 0.83f, 0.26f, 1.0f), t));
+
+		draw_list->AddRectFilled(p, ImVec2(p.x + width, p.y + height), col_bg, height * 0.5f);
+		draw_list->AddCircleFilled(ImVec2(p.x + radius + t * (width - radius * 2.0f), p.y + radius), radius - 1.5f, IM_COL32(255, 255, 255, 255));
+	}
+
+	void CenteredText(const char* label, const ImVec2& size_arg)
+	{
+		using namespace ImGui;
+		ImGuiWindow* window = GetCurrentWindow();
+
+		ImGuiContext& g = *GImGui;
+		const ImGuiStyle& style = g.Style;
+		const ImGuiID id = window->GetID(label);
+		const ImVec2 label_size = CalcTextSize(label, NULL, true);
+
+		ImVec2 pos = window->DC.CursorPos;
+		ImVec2 size = CalcItemSize(size_arg, label_size.x + style.FramePadding.x * 2.0f, label_size.y + style.FramePadding.y * 2.0f);
+
+		const ImVec2 pos2 = ImVec2((pos.x + size.x), (pos.y + size.y));
+		const ImRect bb(pos, pos2);
+
+		ItemSize(size, style.FramePadding.y);
+
+		const ImVec2 pos_min = ImVec2((bb.Min.x + style.FramePadding.x), (bb.Min.y + style.FramePadding.y));
+		const ImVec2 pos_max = ImVec2((bb.Max.x - style.FramePadding.x), (bb.Max.y - style.FramePadding.y));
+
+		RenderTextClipped(pos_min, pos_max, label, NULL, &label_size, style.ButtonTextAlign, &bb);
+	}
+
+	int GetCurrentMonitor()
+	{
+		auto cur_window = ImGui::GetCurrentWindow();
+		auto monitor = cur_window->Viewport->PlatformMonitor;
+		return monitor;
+	}
+
+	ImVec2 GetMonitorResolution(int idMonitor = GetCurrentMonitor())
+	{
+		ImGuiContext& g = *GImGui;
+		auto monitor = g.PlatformIO.Monitors[idMonitor];
+		return monitor.WorkSize;
+	}
+
+	// #TODO add bold fonts to widget in future after creating font management
+	//void MessageBox(std::string_view text, int type, void (*callback)(int))
+	void AltMessageBox()
+	{
+		if (ImGui::Button("Modal.."))
+			ImGui::OpenPopup("Delete?");
+
+		// Always center this window when appearing
+		auto& io = ImGui::GetIO();
+		auto DisplaySize = GetMonitorResolution();
+		ImVec2 center(DisplaySize.x * 0.5f, DisplaySize.y * 0.5f);
+		ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+		const ImVec2 p = ImVec2(24.0f, 24.0f);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, p);
+		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 10.0f);
+		ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(56.0 / 255.0, 54.0 / 255.0, 50.0 / 255.0, 1.0f));
+
+		if (ImGui::BeginPopupModal("Delete?", NULL, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar))
+		{
+			//ImGui::PushFont(font_Bold);
+
+			// Compute button size
+			ImGuiContext& g = *GImGui;
+			const ImGuiStyle& style = g.Style;
+			float margin = (style.WindowPadding.x) * 2.0f;
+			float w = ImGui::GetWindowWidth() - margin;
+			float h = 35.0f;
+
+			CenteredText("Do you want to save the changes", ImVec2(w, 20));
+			CenteredText("made to the document ?", ImVec2(w, 20));
+			//ImGui::PopFont();
+			//ImGui::PushFont(font);
+			CenteredText("\nYou can revert to undo the changes\n \n", ImVec2(w, 40));
+			//ImGui::PopFont();
+
+			//ImGui::PushFont(font_Medium);
+
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(199.0 / 255.0, 195.0 / 255.0, 190.0 / 255.0, 1.0f));
+			if (ImGui::Button("Save", ImVec2(w, h)))
+			{
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::PopStyleColor();
+
+			const ImVec2 spc = ImVec2(7.0f, 16.0f);
+			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, spc);
+
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(116.0 / 255.0, 114.0 / 255.0, 109.0 / 255.0, 1.0f));
+			if (ImGui::Button("Revert Changes", ImVec2(w, h)))
+			{
+				ImGui::CloseCurrentPopup();
+			}
+
+			if (ImGui::Button("Cancel", ImVec2(w, h)))
+			{
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::PopStyleColor();
+
+			ImGui::PopStyleVar(1);
+			//ImGui::PopFont();
+			ImGui::EndPopup();
+		}
+
+		ImGui::PopStyleColor();
+		ImGui::PopStyleVar(2);
+	}
+
 	void SelectableColor(ImU32 color)
 	{
 		ImVec2 p_min = ImGui::GetItemRectMin();
@@ -29,6 +571,7 @@ namespace widgets {
 
 	bool CustomSelectable(const char* label, bool* p_selected, ImU32 bg_color, ImGuiSelectableFlags flags, const ImVec2& size_arg)
 	{
+		auto& style = ImGui::GetStyle();
 		ImDrawList* draw_list = ImGui::GetWindowDrawList();
 		draw_list->ChannelsSplit(2);
 
@@ -36,13 +579,29 @@ namespace widgets {
 		draw_list->ChannelsSetCurrent(1);
 
 		bool result = ImGui::Selectable(label, p_selected, flags, size_arg);
+		auto cur_item_flags = ImGui::GetItemFlags();
+		bool is_disabled = cur_item_flags & ImGuiItemFlags_Disabled;
+		if (is_disabled)
+		{
+			auto red = bg_color >> 24;
+			auto green = (bg_color << 8) >> 8 + 16;
+			auto blue = (bg_color << 16) >> 16 + 8;
+			auto alpha = (bg_color << 24) >> 24;
+			int correction_factor = 10;
+			red = (255 - red) * correction_factor + red;
+			green = (255 - green) * correction_factor + green;
+			blue = (255 - blue) * correction_factor + blue;
 
+			bg_color = IM_COL32(red, green, blue, alpha);
+
+		}
 		if (!ImGui::IsItemHovered() && !ImGui::IsItemActive() && !*p_selected)
 		{
 			// Render background behind Selectable().
 			draw_list->ChannelsSetCurrent(0);
 			SelectableColor(bg_color);
 		}
+
 
 		// Commit changes.
 		draw_list->ChannelsMerge();
@@ -667,6 +1226,8 @@ namespace widgets::EquiLand {
 				str_range = str_data;
 		}
 		ImGui::Text(str_range.data());
+
+
 	}
 
 	template<size_t N>
@@ -832,6 +1393,17 @@ namespace widgets::EquiLand {
 			for (int x = 0; x < 4; ++x)
 			{
 				auto& suit = suits[x];
+				ImU32 bg_color = {};
+				switch (suit)
+				{
+				case 'h': bg_color = IM_COL32(240, 128, 128, 200); break;
+				case 'c': bg_color = IM_COL32(50, 205, 50, 200); break;
+				case 'd': bg_color = IM_COL32(135, 206, 250, 200); break;
+				case 's': bg_color = IM_COL32(105, 105, 105, 200); break;
+				default:
+					break;
+				}
+
 				if (separator) ImGui::SameLine();
 				auto label = std::format("{}{}", card, suit);
 
@@ -840,7 +1412,7 @@ namespace widgets::EquiLand {
 				auto flags = ImGuiSelectableFlags_SelectOnClick;
 				auto prev_value = selectables[13 * x + y];
 				auto& cur_value = selectables[13 * x + y];
-				if (ImGui::Selectable(label.data(), &selectables[13 * x + y], flags, ImVec2(40, 40)))
+				if (CustomSelectable(label.data(), &selectables[13 * x + y], bg_color, flags, ImVec2(40, 40)))
 				{
 					bool value_changed = prev_value && !cur_value;
 					auto label_prev = std::format("{}{}", card, suit);
@@ -868,6 +1440,7 @@ namespace widgets::EquiLand {
 				separator = true;
 			}
 			separator = false;
+
 		}
 
 		std::string result;
@@ -1061,6 +1634,127 @@ namespace widgets::EquiLand {
 		ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
 		ImGui::Text(output.data());
 	}
+
+	void TreeRangeEditor()
+	{
+		// Buttons to add/delete headers
+		const char* edit_buttons[] = {"Some Icon"};
+
+		ImGuiTreeNodeFlags base_flags = ImGuiTreeNodeFlags_SpanFullWidth;
+		if (ImGui::CollapsingHeader("Default Ranges", ImGuiTreeNodeFlags_None))
+		{
+			int node_clicked = -1;
+			const char* leafs[] = { "OR UTG-1", "OR CO", "OR BU" };
+			static int selection_mask = (1 << 0);
+
+			for (int i = 0; i < 3; ++i)
+			{
+				ImGuiTreeNodeFlags node_flags = base_flags;
+				const bool is_selected = (selection_mask & (1 << i)) != 0;
+				if (is_selected)
+					node_flags |= ImGuiTreeNodeFlags_Selected;
+				node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+
+				ImGui::TreeNodeEx((void*)(intptr_t)i, node_flags, leafs[i], i);
+				if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
+					node_clicked = i;
+			}
+
+			if (node_clicked != -1)
+			{
+				// Update selection state
+				// (process outside of tree loop to avoid visual inconsistencies during the clicking frame)
+				if (ImGui::GetIO().KeyCtrl)
+					selection_mask ^= (1 << node_clicked);          // CTRL+click to toggle
+				else if (!(selection_mask & (1 << node_clicked))) // Depending on selection behavior you want, may want to preserve selection when clicking on item that is part of the selection
+					selection_mask = (1 << node_clicked);           // Click to single-select
+			}
+
+		}
+		if (ImGui::CollapsingHeader("NL2-NL10 Ranges", ImGuiTreeNodeFlags_None))
+		{
+			constexpr auto nFilters = 6;
+			const char* filters[nFilters] = { "Open-Raise", "Call OR", "3-Bet", "Call 3-Bet", "4-Bet", "5-Bet - Push" };
+
+			for (int i = 0; i < nFilters; ++i)
+			{
+				auto curPos = ImGui::GetCursorScreenPos();
+				curPos.x += 20.f;
+				ImGui::SetCursorScreenPos(curPos);
+				if (ImGui::CollapsingHeader(filters[i], ImGuiTreeNodeFlags_None))
+				{
+					int node_clicked = -1;
+					const char* leafs[] = { "OR UTG-1", "OR CO", "OR BU" };
+					static int selection_mask = (1 << 0);
+
+					for (int i = 0; i < 3; ++i)
+					{
+						ImGuiTreeNodeFlags node_flags = base_flags;
+						const bool is_selected = (selection_mask & (1 << i)) != 0;
+						if (is_selected)
+							node_flags |= ImGuiTreeNodeFlags_Selected;
+						node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+
+						ImGui::TreeNodeEx((void*)(intptr_t)i, node_flags, leafs[i], i);
+						if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
+							node_clicked = i;
+					}
+
+					if (node_clicked != -1)
+					{
+						// Update selection state
+						// (process outside of tree loop to avoid visual inconsistencies during the clicking frame)
+						if (ImGui::GetIO().KeyCtrl)
+							selection_mask ^= (1 << node_clicked);          // CTRL+click to toggle
+						else if (!(selection_mask & (1 << node_clicked))) // Depending on selection behavior you want, may want to preserve selection when clicking on item that is part of the selection
+							selection_mask = (1 << node_clicked);           // Click to single-select
+					}
+				}
+			}
+		}
+		if (ImGui::CollapsingHeader("NL10-NL25 Ranges", ImGuiTreeNodeFlags_None))
+		{
+			constexpr auto nSzArr = 3;
+			static bool selection[nSzArr] = { false, false, false };
+			const char* leafs[nSzArr] = { "UTG-1 3-Bet", "BB 3-Bet", "SB 3-Bet" };
+
+			for (int n = 0; n < nSzArr; n++)
+			{
+				if (ImGui::Selectable(leafs[n], selection[n]))
+				{
+					//if (!ImGui::GetIO().KeyCtrl)    // Clear selection when CTRL is not held
+					memset(selection, 0, sizeof(selection));
+					selection[n] ^= 1;
+				}
+			}
+		}
+		if (ImGui::CollapsingHeader("NL25-100 Ranges", ImGuiTreeNodeFlags_None))
+		{
+			ImGui::Text("IsItemHovered: %d", ImGui::IsItemHovered());
+			for (int i = 0; i < 5; i++)
+				ImGui::Text("Some content %d", i);
+		}
+		if (ImGui::CollapsingHeader("MTT Ranges (ABI 1)", ImGuiTreeNodeFlags_None))
+		{
+			ImGui::Text("IsItemHovered: %d", ImGui::IsItemHovered());
+			for (int i = 0; i < 5; i++)
+				ImGui::Text("Some content %d", i);
+		}
+		if (ImGui::CollapsingHeader("MTT Ranges (ABI 10)", ImGuiTreeNodeFlags_None))
+		{
+			ImGui::Text("IsItemHovered: %d", ImGui::IsItemHovered());
+			for (int i = 0; i < 5; i++)
+				ImGui::Text("Some content %d", i);
+		}
+		if (ImGui::CollapsingHeader("MTT Ranges (ABI 50)", ImGuiTreeNodeFlags_None))
+		{
+			ImGui::Text("IsItemHovered: %d", ImGui::IsItemHovered());
+			for (int i = 0; i < 5; i++)
+				ImGui::Text("Some content %d", i);
+		}
+
+	}
+
 }
 
 #endif // !SOURCE_CUSTOM_WIDGETS_HPP
