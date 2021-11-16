@@ -28,10 +28,6 @@ class Application {
 
 	void InitializeWindow();
 	void InitializeImgui();
-
-	// A little hack function to hide main Winapi window in taskbar
-	// and leave there only imgui's docking windows
-	void TaskbarTweak();
 public:
 	Application();
 	~Application();

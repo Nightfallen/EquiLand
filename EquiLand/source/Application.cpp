@@ -1,4 +1,6 @@
 #include "Application.h"
+#include "source/Styles.hpp"
+#include "source/Fonts.hpp"
 
 bool Application::CreateDeviceD3D(HWND hWnd)
 {
@@ -104,10 +106,10 @@ void Application::InitializeWindow()
 		assert(dwError);
 	}
 
-	// Size of window is made '{ wnd_wh, wnd_wh }' because imgui's docking feature creates a new window
-	int wnd_wh = 50;
-	hwnd_ = CreateWindowEx(NULL, wc_.lpszClassName, wndName, WS_POPUP | WS_SYSMENU, 100, 100, wnd_wh, wnd_wh, NULL, NULL, wc_.hInstance, NULL);
-
+	// Easier way to achieve 'TaskbarTweak()' effect
+	// 'WS_EX_TOOLWINDOW' to disable appearing window's taskbar icon
+	int wnd_wh = 100;
+	hwnd_ = CreateWindowEx(WS_EX_TOOLWINDOW, wc_.lpszClassName, wndName, WS_POPUP | WS_SYSMENU, 100, 100, wnd_wh, wnd_wh, NULL, NULL, wc_.hInstance, NULL);
 	// Make main window's area fully transparent
 	SetWindowLong(hwnd_, GWL_EXSTYLE, (int)GetWindowLong(hwnd_, GWL_EXSTYLE) | WS_EX_LAYERED | WS_EX_TRANSPARENT);
 	SetLayeredWindowAttributes(hwnd_, RGB(0, 0, 0), 0, LWA_ALPHA);
@@ -123,7 +125,6 @@ void Application::InitializeWindow()
 
 	// For 'realWndProc' purposes
 	SetWindowLongPtrW(hwnd_, GWLP_USERDATA, (LONG_PTR)this);
-	this->TaskbarTweak();
 	ShowWindow(hwnd_, SW_SHOWDEFAULT);
 	::UpdateWindow(hwnd_);
 }
@@ -140,9 +141,11 @@ void Application::InitializeImgui()
 
 	io.ConfigViewportsNoTaskBarIcon = false;
 	io.ConfigViewportsNoAutoMerge = true;
+	io.ConfigViewportsNoDefaultParent = true;
 
 	// Setup Dear ImGui style
 	ImGui::StyleColorsDark();
+	DarkStyle();
 
 	// When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
 	ImGuiStyle& style = ImGui::GetStyle();
@@ -152,8 +155,6 @@ void Application::InitializeImgui()
 		style.Colors[ImGuiCol_WindowBg].w = 1.0f;
 	}
 	io.ConfigWindowsMoveFromTitleBarOnly = true;
-	// Min size of window
-	//style.WindowMinSize = { 200, 100 };
 
 	// Application handles windows sizing on its own
 	ImGui::GetIO().IniFilename = NULL;
@@ -162,21 +163,8 @@ void Application::InitializeImgui()
 	ImGui_ImplWin32_Init(hwnd_);
 	ImGui_ImplDX11_Init(g_pd3dDevice, g_pd3dDeviceContext);
 
-	io.Fonts->AddFontDefault();
-
+	BuildDefaultFont(io);
 	freetypeTest = {};
-}
-
-void Application::TaskbarTweak()
-{
-	long style = GetWindowLong(hwnd_, GWL_EXSTYLE);
-	//style &= ~(WS_VISIBLE);
-	style |= WS_EX_TOOLWINDOW;
-	//style &= ~(WS_EX_APPWINDOW);
-
-	//ShowWindow(hwnd_, SW_HIDE);
-	SetWindowLong(hwnd_, GWL_EXSTYLE, style);
-	ShowWindow(hwnd_, SW_SHOW); // show the window for the new style to come into effect
 }
 
 Application::Application()
