@@ -584,17 +584,21 @@ namespace widgets {
 		bool is_disabled = cur_item_flags & ImGuiItemFlags_Disabled;
 		if (is_disabled)
 		{
-			auto red = bg_color >> 24;
-			auto green = (bg_color << 8) >> 8 + 16;
-			auto blue = (bg_color << 16) >> 16 + 8;
-			auto alpha = (bg_color << 24) >> 24;
-			int correction_factor = 10;
-			red = (255 - red) * correction_factor + red;
-			green = (255 - green) * correction_factor + green;
-			blue = (255 - blue) * correction_factor + blue;
+			auto NormalizeColor = [](uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
+				return ImVec4(r / 255.f, g / 255.f, b / 255.f, a / 255.f);
+			};
+			auto a = bg_color >> 24;
+			auto b = (bg_color << 8) >> 8 + 16;
+			auto g = (bg_color << 16) >> 16 + 8;
+			auto r = (bg_color << 24) >> 24;
 
-			bg_color = IM_COL32(red, green, blue, alpha);
+			int darken_factor = 15; // %
+			r -= r / darken_factor;
+			g -= g / darken_factor;
+			b -= b / darken_factor;
+			//a -= a / darken_factor;
 
+			bg_color = IM_COL32(r, g, b, a);
 		}
 		if (!ImGui::IsItemHovered() && !ImGui::IsItemActive() && !*p_selected)
 		{
@@ -1696,6 +1700,7 @@ namespace widgets::EquiLand {
 				if (!ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))
 				{
 					std::copy(header.begin(), header.end() - 3, buf);
+
 				}
 				
 				ImGui::SetNextItemWidth(maxItem.x - minItem.x);

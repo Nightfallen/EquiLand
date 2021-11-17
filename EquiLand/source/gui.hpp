@@ -236,7 +236,6 @@ void CustomWindow(bool* is_open)
 	{
 		test = true;
 	}
-	Notify(&test, "Downloading", "Update is being downloaded");
 
 	ImGui::NextColumn();
 
@@ -258,34 +257,32 @@ void CustomWindow(bool* is_open)
 // Playground window
 void PlaygroundWindow(bool* is_open)
 {
-	ImGui::StyleColorsDark();
 	ImGui::SetNextWindowSize(ImVec2(1000, 600), ImGuiCond_Once);
-
-	auto& io = ImGui::GetIO();
-	auto& style = ImGui::GetStyle();
 	ImGui::Begin("##window_no_name1", is_open);
-	static bool popup = false;
 
-	if (ImGui::Button("Open popup"))
-		ImGui::OpenPopup("Popup");
-	ImGui::SetNextWindowSize({ 500.f, 300.f }, ImGuiCond_Appearing);
-
-	style.Colors[ImGuiCol_ModalWindowDimBg] = { 0.f, 0.f, 0.f, 0.8f };
-	if (ImGui::BeginPopupModal("Popup", is_open, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize))
-	{
-		static float col1[3] = { 1.0f, 0.0f, 0.2f };
-		static float col2[4] = { 0.4f, 0.7f, 0.0f, 0.5f };
-		ImGui::ColorEdit3("Color 1", col1);
-		ImGui::ColorEdit4("Color 2", col2);
-
-		ImGui::EndPopup();
-	}
 	ImGui::End();
 }
 
 void UI_HANDLER(HWND hwnd)
 {
 	// Our state
+	static NotificationSystem notifySystem;
+
+	static bool just_once = true;
+	if (just_once)
+	{
+		auto custom_content = []() {
+			ImGui::Text("Did you open it? Or at least hover?");
+			widgets::HyperLinkText("Open GitHub page", "https://github.com/Nightfallen/EquiLand");
+		};
+
+		notifySystem.AddNotificationIcon("Export history ready", "Check your '{PATH}' or click open", ICON_FA_CHECK, ImVec4(0, 1, 0, 1));
+		notifySystem.AddNotificationIcon("Update Error", "You need to reinstall app", ICON_FA_BAN, ImVec4(1, 0, 0, 1));
+		notifySystem.AddNotificationCustomElements("Awesome notify", ICON_FA_INFO, ImVec4(0.117, 0.564, 1, 1.f), custom_content);
+
+		just_once = false;
+	}
+
 	static bool show_demo_window = true;
 	static bool show_equiland_window = true;
 	static bool show_temp_window = false;
@@ -298,6 +295,8 @@ void UI_HANDLER(HWND hwnd)
 	CustomWindow(&show_equiland_window);
 	if (show_temp_window)
 		PlaygroundWindow(&show_temp_window);
+
+	notifySystem.RenderNotifications();
 }
 
 #endif // !SOURCE_GUI_HPP 
