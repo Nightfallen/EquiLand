@@ -1638,16 +1638,130 @@ namespace widgets::EquiLand {
 
 	void TreeRangeEditor()
 	{
+		auto& io = ImGui::GetIO();
+		auto& style = ImGui::GetStyle();
+
 		// Buttons to add/delete headers
 		const char* edit_buttons[] = { ICON_FA_PLUS_CIRCLE, ICON_FA_FILE, ICON_FA_LIST };
 		size_t sz_Arr = ARRAYSIZE(edit_buttons);
-
+		static std::vector<std::string> headers;
+		static std::vector<bool> states;
+		static std::vector<bool> states_rename;
+		
 		bool separator = false;
 		for (int i = 0; i < sz_Arr; ++i)
 		{
 			if (separator) ImGui::SameLine();
-			ImGui::Button(edit_buttons[i]);
+			if (ImGui::Button(edit_buttons[i]))
+			{
+				headers.push_back("Empty Header###");
+				states.push_back(false);
+				states_rename.push_back(false);
+			}
 			separator = true;
+		}
+
+		static uint64_t some_id = 1 << 33;
+		for (int i = 0; auto&& header : headers)
+		{
+			// Need to be careful with id
+			// If headers dont open, then there is issues with id
+			ImGui::PushID(some_id + i++);
+			auto label = header;
+
+			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_None;
+			if (states_rename[i - 1])
+			{
+				label = "###";
+				flags |= ImGuiTreeNodeFlags_AllowItemOverlap;
+			}
+			
+			bool open = ImGui::CollapsingHeader(label.data(), flags);
+			if (states_rename[i - 1])
+			{
+				auto minItem = ImGui::GetItemRectMin();
+				auto maxItem = ImGui::GetItemRectMax();
+				auto nodeTextOffset = ImGui::GetTreeNodeToLabelSpacing();
+				nodeTextOffset += style.FramePadding.x;
+
+				//auto startPos = ImGui::GetCursorScreenPos();
+				minItem.x += nodeTextOffset;
+				ImGui::SetCursorScreenPos(minItem);
+				//ImGui::SetCursorScreenPos()
+				ImGui::PushStyleColor(ImGuiCol_FrameBg, { 0, 0, 0, 0 });
+				ImGui::PushStyleColor(ImGuiCol_FrameBgActive, { 0, 0, 0, 0 });
+				ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, { 0, 0, 0, 0 });
+				ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.f);
+				char buf[256]{};
+				if (!ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))
+				{
+					std::copy(header.begin(), header.end() - 3, buf);
+				}
+				
+				ImGui::SetNextItemWidth(maxItem.x - minItem.x);
+				if (ImGui::InputText("##Rename current", buf, 256))
+				{
+					if (ImGui::IsItemActivated())
+					{
+					}
+					if (ImGui::IsItemDeactivated())
+					{
+						header = buf;
+						header.append("###");
+						states_rename[i - 1] = false;
+					}
+				}
+
+				// !ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0)
+				if (!ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))
+				{
+					ImGui::SetKeyboardFocusHere(-1);
+				}
+
+
+				ImGui::PopStyleColor(3);
+				ImGui::PopStyleVar();
+			}
+			else
+			{
+
+			}
+
+			auto clicked_rmb = ImGui::IsItemClicked(1);
+			if (clicked_rmb)
+			{
+				states[i - 1] = true;
+				ImGui::OpenPopup(label.data());
+			}
+			if (states[i - 1])
+			{
+				if (ImGui::BeginPopupContextWindow(label.data(), ImGuiPopupFlags_NoOpenOverItems))
+				{
+					if (ImGui::MenuItemEx("Rename", ICON_FA_PENCIL));
+					{
+						if (ImGui::IsItemClicked())
+							states_rename[i - 1] = true;
+					}
+					if (ImGui::MenuItemEx("Delete", ICON_FA_TRASH_O))
+					{
+						auto it = std::find(headers.begin(), headers.end(), header);
+						headers.erase(it);
+					}
+
+
+					ImGui::EndPopup();
+				}
+				else
+					states[i - 1] = false;
+			}
+			if (open)
+			{
+				ImGui::Text("IsItemHovered: %d", ImGui::IsItemHovered());
+				for (int i = 0; i < 5; i++)
+					ImGui::Text("Some content %d", i);
+			}
+
+			ImGui::PopID();
 		}
 
 		ImGuiTreeNodeFlags base_flags = ImGuiTreeNodeFlags_SpanFullWidth;
