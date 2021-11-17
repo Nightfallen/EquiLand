@@ -1640,10 +1640,20 @@ namespace widgets::EquiLand {
 		ImGui::Text(output.data());
 	}
 
+	struct RangeNode {
+		bool isHeader;
+		std::string name;
+		bool state_context_menu;
+		bool state_rename;
+		RangeNode* child;
+	};
+
 	void TreeRangeEditor()
 	{
 		auto& io = ImGui::GetIO();
 		auto& style = ImGui::GetStyle();
+
+		static std::vector<RangeNode> nodes;
 
 		// Buttons to add/delete headers
 		const char* edit_buttons[] = { ICON_FA_PLUS_CIRCLE, ICON_FA_FILE, ICON_FA_LIST };
@@ -1658,114 +1668,168 @@ namespace widgets::EquiLand {
 			if (separator) ImGui::SameLine();
 			if (ImGui::Button(edit_buttons[i]))
 			{
-				headers.push_back("Empty Header###");
+				std::string name_first = "Empty Header###";
+				headers.push_back(name_first);
 				states.push_back(false);
 				states_rename.push_back(false);
+
+				std::string name_node = "Empty Node Header###";
+				RangeNode node = { 
+					.isHeader = true, 
+					.name = name_node,
+					.state_context_menu = false, 
+					.state_rename = false, 
+					.child = nullptr };
+				nodes.push_back(node);
 			}
 			separator = true;
 		}
 
-		static uint64_t some_id = 1 << 33;
-		for (int i = 0; auto&& header : headers)
+		static uint64_t some_new_id = 1ll << 40;
+		//for (auto i = 0; auto&& node : nodes)
+		int prevSize = nodes.size();
+		for (int i = 0; i < prevSize; ++i)
 		{
-			// Need to be careful with id
-			// If headers dont open, then there is issues with id
-			ImGui::PushID(some_id + i++);
-			auto label = header;
+			auto&& node = nodes[i];
+			ImGui::PushID(some_new_id + i++);
 
-			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_None;
-			if (states_rename[i - 1])
+			if (node.isHeader)
 			{
-				label = "###";
-				flags |= ImGuiTreeNodeFlags_AllowItemOverlap;
+				auto label = node.name;
+				ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_None;
+				if (node.state_rename)
+				{
+					label = "###";
+					flags |= ImGuiTreeNodeFlags_AllowItemOverlap;
+				}
+				bool open = ImGui::CollapsingHeader(label.data(), flags);
+				if (node.state_rename)
+				{
+					auto minItem = ImGui::GetItemRectMin();
+					auto maxItem = ImGui::GetItemRectMax();
+					auto nodeTextOffset = ImGui::GetTreeNodeToLabelSpacing();
+					nodeTextOffset += style.FramePadding.x;
+
+					//auto startPos = ImGui::GetCursorScreenPos();
+					minItem.x += nodeTextOffset;
+					ImGui::SetCursorScreenPos(minItem);
+					//ImGui::SetCursorScreenPos()
+					ImGui::PushStyleColor(ImGuiCol_FrameBg, { 0, 0, 0, 0 });
+					ImGui::PushStyleColor(ImGuiCol_FrameBgActive, { 0, 0, 0, 0 });
+					ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, { 0, 0, 0, 0 });
+					ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.f);
+					char buf[256]{};
+					if (!ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))
+					{
+						std::copy(node.name.begin(), node.name.end() - 3, buf);
+
+					}
+
+					ImGui::SetNextItemWidth(maxItem.x - minItem.x);
+					if (ImGui::InputText("##Rename current Node", buf, 256))
+					{
+						if (ImGui::IsItemActivated())
+						{
+						}
+						if (ImGui::IsItemDeactivated())
+						{
+							node.name = buf;
+							node.name.append("###");
+							node.state_rename = false;
+						}
+					}
+
+					// !ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0)
+					if (!ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))
+					{
+						ImGui::SetKeyboardFocusHere(-1);
+					}
+
+
+					ImGui::PopStyleColor(3);
+					ImGui::PopStyleVar();
+				}
+
+				auto clicked_rmb = ImGui::IsItemClicked(1);
+				if (clicked_rmb)
+				{
+					node.state_context_menu = true;
+					ImGui::OpenPopup(label.data());
+				}
+				if (node.state_context_menu)
+				{
+					if (ImGui::BeginPopupContextWindow(label.data(), ImGuiPopupFlags_NoOpenOverItems))
+					{
+						if (ImGui::MenuItemEx("Add Category", ICON_FA_PLUS_CIRCLE))
+						{
+							node.child = new RangeNode {
+								.isHeader = true,
+								.name = "Empty Sub Node Header###",
+								.state_context_menu = false,
+								.state_rename = false,
+								.child = nullptr };
+							//nodes.push_back(sub_category);
+						}
+						if (ImGui::MenuItemEx("Add Range", ICON_FA_PLUS_CIRCLE))
+						{
+							RangeNode new_node = {
+								.isHeader = false,
+								.name = "Blank range###",
+								.state_context_menu = false,
+								.state_rename = false,
+								.child = nullptr };
+							nodes.push_back(new_node);
+						}
+
+						if (ImGui::MenuItemEx("Rename", ICON_FA_PENCIL));
+						{
+							if (ImGui::IsItemClicked())
+								node.state_rename = true;
+						}
+						if (ImGui::MenuItemEx("Delete", ICON_FA_TRASH_O))
+						{
+							//auto it = std::find(headers.begin(), headers.end(), header);
+							//headers.erase(it);
+
+							for (int ijk = 0; auto&& nNode : nodes)
+							{
+								if (nNode.name == node.name)
+								{
+									nodes.erase(nodes.begin() + ijk);
+									break;
+								}
+								++ijk;
+							}
+
+						}
+						ImGui::EndPopup();
+					}
+					else
+						node.state_context_menu = false;
+				}
+				if (open)
+				{
+					if (node.child != nullptr)
+					{
+						// Repeat code above, so need to refactor and unify it somehow :)
+					}
+
+					ImGui::Text("IsItemsHovered: %d", ImGui::IsItemHovered());
+					for (int i = 0; i < 5; i++)
+						ImGui::Text("Some contents %d", i);
+
+					// non-headers
+					for (auto&& node_range : nodes)
+					{
+						if (!node_range.isHeader)
+							ImGui::Text(node_range.name.data());
+					}
+
+
+				}
 			}
+
 			
-			bool open = ImGui::CollapsingHeader(label.data(), flags);
-			if (states_rename[i - 1])
-			{
-				auto minItem = ImGui::GetItemRectMin();
-				auto maxItem = ImGui::GetItemRectMax();
-				auto nodeTextOffset = ImGui::GetTreeNodeToLabelSpacing();
-				nodeTextOffset += style.FramePadding.x;
-
-				//auto startPos = ImGui::GetCursorScreenPos();
-				minItem.x += nodeTextOffset;
-				ImGui::SetCursorScreenPos(minItem);
-				//ImGui::SetCursorScreenPos()
-				ImGui::PushStyleColor(ImGuiCol_FrameBg, { 0, 0, 0, 0 });
-				ImGui::PushStyleColor(ImGuiCol_FrameBgActive, { 0, 0, 0, 0 });
-				ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, { 0, 0, 0, 0 });
-				ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.f);
-				char buf[256]{};
-				if (!ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))
-				{
-					std::copy(header.begin(), header.end() - 3, buf);
-
-				}
-				
-				ImGui::SetNextItemWidth(maxItem.x - minItem.x);
-				if (ImGui::InputText("##Rename current", buf, 256))
-				{
-					if (ImGui::IsItemActivated())
-					{
-					}
-					if (ImGui::IsItemDeactivated())
-					{
-						header = buf;
-						header.append("###");
-						states_rename[i - 1] = false;
-					}
-				}
-
-				// !ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0)
-				if (!ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))
-				{
-					ImGui::SetKeyboardFocusHere(-1);
-				}
-
-
-				ImGui::PopStyleColor(3);
-				ImGui::PopStyleVar();
-			}
-			else
-			{
-
-			}
-
-			auto clicked_rmb = ImGui::IsItemClicked(1);
-			if (clicked_rmb)
-			{
-				states[i - 1] = true;
-				ImGui::OpenPopup(label.data());
-			}
-			if (states[i - 1])
-			{
-				if (ImGui::BeginPopupContextWindow(label.data(), ImGuiPopupFlags_NoOpenOverItems))
-				{
-					if (ImGui::MenuItemEx("Rename", ICON_FA_PENCIL));
-					{
-						if (ImGui::IsItemClicked())
-							states_rename[i - 1] = true;
-					}
-					if (ImGui::MenuItemEx("Delete", ICON_FA_TRASH_O))
-					{
-						auto it = std::find(headers.begin(), headers.end(), header);
-						headers.erase(it);
-					}
-
-
-					ImGui::EndPopup();
-				}
-				else
-					states[i - 1] = false;
-			}
-			if (open)
-			{
-				ImGui::Text("IsItemHovered: %d", ImGui::IsItemHovered());
-				for (int i = 0; i < 5; i++)
-					ImGui::Text("Some content %d", i);
-			}
-
 			ImGui::PopID();
 		}
 
