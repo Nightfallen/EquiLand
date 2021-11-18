@@ -1648,6 +1648,60 @@ namespace widgets::EquiLand {
 		RangeNode* child;
 	};
 
+	enum NodeContextMenuFlags {
+		NodeContextMenuFlags_None = 0,
+		NodeContextMenuFlags_NoAppendCategory = 1 << 0,
+		NodeContextMenuFlags_NoAppendRange = 1 << 1,
+		NodeContextMenuFlags_NoRename = 1 << 2,
+		NodeContextMenuFlags_NoDelete = 1 << 3,
+	};
+
+	inline void NodeContextMenu(RangeNode& node, std::vector<RangeNode>& nodes, int flags = NodeContextMenuFlags_None)
+	{
+		bool no_add_category = flags & NodeContextMenuFlags_NoAppendCategory; (flags >> 0) & 1U;
+		bool no_add_range = flags & NodeContextMenuFlags_NoAppendRange;
+		bool no_rename = flags & NodeContextMenuFlags_NoRename;
+		bool no_delete = flags & NodeContextMenuFlags_NoDelete;
+		if (!no_add_category && ImGui::MenuItemEx("Add Category", ICON_FA_PLUS_CIRCLE))
+		{
+			node.child = new RangeNode{
+				.isHeader = true,
+				.name = "Empty Sub Node Header###",
+				.state_context_menu = false,
+				.state_rename = false,
+				.child = nullptr };
+			//nodes.push_back(sub_category);
+		}
+		if (!no_add_range && ImGui::MenuItemEx("Add Range", ICON_FA_PLUS_CIRCLE))
+		{
+			RangeNode new_node = {
+				.isHeader = false,
+				.name = "Blank range###",
+				.state_context_menu = false,
+				.state_rename = false,
+				.child = nullptr };
+			nodes.push_back(new_node);
+		}
+		if (!no_rename && ImGui::MenuItemEx("Rename", ICON_FA_PENCIL))
+		{
+			node.state_rename = true;
+		}
+		if (!no_delete && ImGui::MenuItemEx("Delete", ICON_FA_TRASH_O))
+		{
+			for (int ijk = 0; auto && nNode : nodes)
+			{
+				if (nNode.name == node.name)
+				{
+					// todo child deletion
+					nodes.erase(nodes.begin() + ijk);
+					break;
+				}
+				++ijk;
+			}
+
+		}
+	}
+
 	void TreeRangeEditor()
 	{
 		auto& io = ImGui::GetIO();
@@ -1658,9 +1712,6 @@ namespace widgets::EquiLand {
 		// Buttons to add/delete headers
 		const char* edit_buttons[] = { ICON_FA_PLUS_CIRCLE, ICON_FA_FILE, ICON_FA_LIST };
 		size_t sz_Arr = ARRAYSIZE(edit_buttons);
-		static std::vector<std::string> headers;
-		static std::vector<bool> states;
-		static std::vector<bool> states_rename;
 		
 		bool separator = false;
 		for (int i = 0; i < sz_Arr; ++i)
@@ -1668,11 +1719,6 @@ namespace widgets::EquiLand {
 			if (separator) ImGui::SameLine();
 			if (ImGui::Button(edit_buttons[i]))
 			{
-				std::string name_first = "Empty Header###";
-				headers.push_back(name_first);
-				states.push_back(false);
-				states_rename.push_back(false);
-
 				std::string name_node = "Empty Node Header###";
 				RangeNode node = { 
 					.isHeader = true, 
@@ -1685,12 +1731,10 @@ namespace widgets::EquiLand {
 			separator = true;
 		}
 
-		static uint64_t some_new_id = 1ll << 40;
-		//for (auto i = 0; auto&& node : nodes)
-		int prevSize = nodes.size();
-		for (int i = 0; i < prevSize; ++i)
+		static uint64_t some_new_id = 1ll << 30;
+		for (int i = 0; auto && node : nodes)
 		{
-			auto&& node = nodes[i];
+			//auto&& node = nodes[i];
 			ImGui::PushID(some_new_id + i++);
 
 			if (node.isHeader)
@@ -1750,70 +1794,47 @@ namespace widgets::EquiLand {
 					ImGui::PopStyleVar();
 				}
 
-				auto clicked_rmb = ImGui::IsItemClicked(1);
-				if (clicked_rmb)
+				if (ImGui::BeginPopupContextItem())
 				{
-					node.state_context_menu = true;
-					ImGui::OpenPopup(label.data());
+					NodeContextMenu(node, nodes, NodeContextMenuFlags_NoAppendCategory);
+					ImGui::EndPopup();
 				}
-				if (node.state_context_menu)
-				{
-					if (ImGui::BeginPopupContextWindow(label.data(), ImGuiPopupFlags_NoOpenOverItems))
-					{
-						if (ImGui::MenuItemEx("Add Category", ICON_FA_PLUS_CIRCLE))
-						{
-							node.child = new RangeNode {
-								.isHeader = true,
-								.name = "Empty Sub Node Header###",
-								.state_context_menu = false,
-								.state_rename = false,
-								.child = nullptr };
-							//nodes.push_back(sub_category);
-						}
-						if (ImGui::MenuItemEx("Add Range", ICON_FA_PLUS_CIRCLE))
-						{
-							RangeNode new_node = {
-								.isHeader = false,
-								.name = "Blank range###",
-								.state_context_menu = false,
-								.state_rename = false,
-								.child = nullptr };
-							nodes.push_back(new_node);
-						}
 
-						if (ImGui::MenuItemEx("Rename", ICON_FA_PENCIL));
-						{
-							if (ImGui::IsItemClicked())
-								node.state_rename = true;
-						}
-						if (ImGui::MenuItemEx("Delete", ICON_FA_TRASH_O))
-						{
-							//auto it = std::find(headers.begin(), headers.end(), header);
-							//headers.erase(it);
-
-							for (int ijk = 0; auto&& nNode : nodes)
-							{
-								if (nNode.name == node.name)
-								{
-									nodes.erase(nodes.begin() + ijk);
-									break;
-								}
-								++ijk;
-							}
-
-						}
-						ImGui::EndPopup();
-					}
-					else
-						node.state_context_menu = false;
-				}
 				if (open)
 				{
 					if (node.child != nullptr)
 					{
 						// Repeat code above, so need to refactor and unify it somehow :)
+						ImGui::PushID(some_new_id + i++);
+						auto sub_node = node.child;
+						auto sub_label = sub_node->name;
+						ImGuiTreeNodeFlags sub_flags = ImGuiTreeNodeFlags_None;
+
+						auto curPos = ImGui::GetCursorScreenPos();
+						curPos.x += ImGui::GetTreeNodeToLabelSpacing();
+						ImGui::SetCursorScreenPos(curPos);
+
+						bool sub_open = ImGui::CollapsingHeader(label.data(), flags);
+
+						if (sub_open)
+						{
+							curPos = ImGui::GetCursorScreenPos();
+							curPos.x += ImGui::GetTreeNodeToLabelSpacing();
+							ImGui::SetCursorScreenPos(curPos);
+							ImGui::Text("IsItemsHovered: %d", ImGui::IsItemHovered());
+							for (int i = 0; i < 5; i++)
+							{
+								curPos = ImGui::GetCursorScreenPos();
+								curPos.x += ImGui::GetTreeNodeToLabelSpacing();
+								ImGui::SetCursorScreenPos(curPos);
+								ImGui::Text("Some contents %d", i);
+							}
+						}
+
+						ImGui::PopID();
 					}
 
+					
 					ImGui::Text("IsItemsHovered: %d", ImGui::IsItemHovered());
 					for (int i = 0; i < 5; i++)
 						ImGui::Text("Some contents %d", i);
@@ -1824,12 +1845,10 @@ namespace widgets::EquiLand {
 						if (!node_range.isHeader)
 							ImGui::Text(node_range.name.data());
 					}
-
-
+					
 				}
 			}
 
-			
 			ImGui::PopID();
 		}
 
