@@ -131,6 +131,8 @@ std::string MenuItemText(std::string_view text, std::string_view icon = ICON_FA_
 
 void CustomWindow(bool* is_open)
 {
+	auto& style = ImGui::GetStyle();
+	auto& io = ImGui::GetIO();
 	ImGui::SetNextWindowSize({ 1400.f, 800.f }, ImGuiCond_Once);
 	auto windows_flags = ImGuiWindowFlags_MenuBar;
 	ImGui::Begin("EquiLand", is_open, windows_flags);
@@ -217,39 +219,60 @@ void CustomWindow(bool* is_open)
 	 ShowPopup();
 	*/
 
-	ImGui::Text("Something coming soon...");
-	ImGui::Columns(4, "##main_ui", false);
-
-	ImGui::SetColumnWidth(0, 250.f);
-	ImGui::SetColumnWidth(1, 650.f);
-	ImGui::SetColumnWidth(2, 250.f);
-	ImGui::SetColumnWidth(3, 250.f);
-
-	widgets::EquiLand::TreeRangeEditor();
-	ImGui::NextColumn();
-
 	static widgets::EquiLand::CardMatrix range_matrix = {};
-	widgets::EquiLand::RangeSelect(range_matrix);
-	static bool test = false;
-
-	if (ImGui::Button("Test notify"))
-	{
-		test = true;
-	}
-
-	ImGui::NextColumn();
-
-
 	static widgets::EquiLand::Cards dead_cards = {};
 	static widgets::EquiLand::Cards board_cards = {};
-	widgets::EquiLand::BoardSelect<5>(board_cards, true, dead_cards);
-	ImGui::NextColumn();
-
-	//widgets::EquiLand::DeadCardsSelect();
 	auto& range = range_matrix.range;
-	widgets::EquiLand::DeadCardsSelect<2>(dead_cards, range, true, board_cards);
-	ImGui::NextColumn();
-	ImGui::Columns(1);
+	auto posCursor = ImGui::GetCursorStartPos();
+	auto wndSize = ImGui::GetWindowSize();
+	
+	auto paddings = style.FramePadding + style.WindowPadding;
+	auto result = wndSize - posCursor - paddings;
+	float h = result.y; //800 - paddings.y;
+	float w = result.x; // 1400 - paddings.x;
+	static float spl1 = 250;
+	static float spl2 = 650;
+	static float spl3 =  250;
+	static float spl4 =  250;
+
+	float child_w1 = spl1;
+	float child_w2 = spl2;
+	float child_w3 = spl3;
+	float child_w4 = spl4;
+
+	widgets::Splitter("##Splitter1", true, 8.0f, &spl1, &spl2, 8, 8, h);
+
+	if (ImGui::BeginChild("child1", ImVec2(child_w1, h), true))
+	{
+		widgets::EquiLand::TreeRangeEditor();
+		ImGui::EndChild();
+	}
+	ImGui::SameLine();
+	widgets::Splitter("##Splitter2", true, 8.f, &spl2, &spl3, 8, 8, h);
+	ImGui::SameLine();
+	if (ImGui::BeginChild("child2", ImVec2(child_w2, h), true))
+	{
+		widgets::EquiLand::RangeSelect(range_matrix);
+		ImGui::EndChild();
+	}
+	ImGui::SameLine();
+	widgets::Splitter("##Splitter3", true, 8.f, &spl3, &spl4, 8, 8, h);
+	ImGui::SameLine();
+	if (ImGui::BeginChild("child3", ImVec2(child_w3, h), true))
+	{	
+		widgets::EquiLand::BoardSelect<5>(board_cards, true, dead_cards);
+		ImGui::EndChild();
+	}
+
+	ImGui::SameLine();
+	//if (ImGui::BeginChild("child4", ImVec2(sz4, h), true))
+	{	
+		ImGui::BeginChild("child4", ImVec2(child_w4, h), true);
+		widgets::EquiLand::DeadCardsSelect<2>(dead_cards, range, true, board_cards);
+		ImGui::EndChild();
+	}
+
+
 
 	ImGui::End();
 }

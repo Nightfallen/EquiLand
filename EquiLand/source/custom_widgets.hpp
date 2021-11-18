@@ -402,6 +402,51 @@ namespace widgets {
 		}
 	}
 
+	void DrawSplitter(int split_vertically, float thickness, float* size0, float* size1, float min_size0, float min_size1)
+	{
+		ImVec2 backup_pos = ImGui::GetCursorPos();
+		if (split_vertically)
+			ImGui::SetCursorPosY(backup_pos.y + *size0);
+		else
+			ImGui::SetCursorPosX(backup_pos.x + *size0);
+
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0, 0, 0, 0));          // We don't draw while active/pressed because as we move the panes the splitter button will be 1 frame late
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.6f, 0.6f, 0.6f, 0.10f));
+		ImGui::Button("##Splitter", ImVec2(!split_vertically ? thickness : -1.0f, split_vertically ? thickness : -1.0f));
+		ImGui::PopStyleColor(3);
+
+		ImGui::SetItemAllowOverlap(); // This is to allow having other buttons OVER our splitter. 
+
+		if (ImGui::IsItemActive())
+		{
+			float mouse_delta = split_vertically ? ImGui::GetIO().MouseDelta.y : ImGui::GetIO().MouseDelta.x;
+
+			// Minimum pane size
+			if (mouse_delta < min_size0 - *size0)
+				mouse_delta = min_size0 - *size0;
+			if (mouse_delta > *size1 - min_size1)
+				mouse_delta = *size1 - min_size1;
+
+			// Apply resize
+			*size0 += mouse_delta;
+			*size1 -= mouse_delta;
+		}
+		ImGui::SetCursorPos(backup_pos);
+	}
+
+	bool Splitter(const char* str_id, bool split_vertically, float thickness, float* size1, float* size2, float min_size1, float min_size2, float splitter_long_axis_size = -1.0f)
+	{
+		using namespace ImGui;
+		ImGuiContext& g = *GImGui;
+		ImGuiWindow* window = g.CurrentWindow;
+		ImGuiID id = window->GetID(str_id);
+		ImRect bb;
+		bb.Min = window->DC.CursorPos + (split_vertically ? ImVec2(*size1, 0.0f) : ImVec2(0.0f, *size1));
+		bb.Max = bb.Min + CalcItemSize(split_vertically ? ImVec2(thickness, splitter_long_axis_size) : ImVec2(splitter_long_axis_size, thickness), 0.0f, 0.0f);
+		return SplitterBehavior(bb, id, split_vertically ? ImGuiAxis_X : ImGuiAxis_Y, size1, size2, min_size1, min_size2, 0.0f);
+	}
+
 	bool HyperLinkText(std::string_view label, std::string_view link, bool was_clicked = false)
 	{
 		ImVec4 color = was_clicked ? ImVec4{ 0.294, 0, 0.509, 0.8 } : ImVec4{ 0, 0, 0.803, 0.8 };
