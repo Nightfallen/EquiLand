@@ -1725,32 +1725,128 @@ namespace widgets::EquiLand {
 		}
 		if (!no_delete && ImGui::MenuItemEx("Delete", ICON_FA_TRASH_O))
 		{
-			for (int ijk = 0; auto && nNode : nodes)
-			{
-				if (nNode->name == node->name)
-				{
-					DeleteNodeWithChilds(nNode->childs);
-					nodes.erase(nodes.begin() + ijk);
-					break;
-				}
-				++ijk;
-			}
 			result = NodeContextMenuResult_Delete;
 		}
 		return result;
 	}
 
-	void RealRecursiveTreeRange(std::vector<std::unique_ptr<RangeNode>>* nodes, int rec_level = 1, int id_start = 0)
+	inline int RangeContextMenu(RangeNode* node, std::vector<std::unique_ptr<RangeNode>>& nodes, int flags = NodeContextMenuFlags_None)
+	{
+		bool no_add_category = flags & NodeContextMenuFlags_NoAppendCategory; (flags >> 0) & 1U;
+		bool no_add_range = flags & NodeContextMenuFlags_NoAppendRange;
+		bool no_rename = flags & NodeContextMenuFlags_NoRename;
+		bool no_delete = flags & NodeContextMenuFlags_NoDelete;
+		int result = 0;
+
+		if (!no_rename && ImGui::MenuItemEx("Rename", ICON_FA_PENCIL))
+		{
+			node->state_rename = true;
+			result = NodeContextMenuResult_Rename;
+		}
+		if (!no_delete && ImGui::MenuItemEx("Delete", ICON_FA_TRASH_O))
+		{
+			result = NodeContextMenuResult_Delete;
+		}
+		return result;
+	}
+
+	void StateRenameHelper(RangeNode* node, bool is_header = true)
+	{
+		auto& style = ImGui::GetStyle();
+		auto minItem = ImGui::GetItemRectMin();
+		auto maxItem = ImGui::GetItemRectMax();
+		auto nodeTextOffset = ImGui::GetTreeNodeToLabelSpacing();
+		nodeTextOffset += style.FramePadding.x;
+
+		
+		minItem.x += nodeTextOffset;
+		ImGui::SetCursorScreenPos(minItem);
+		ImGui::PushStyleColor(ImGuiCol_FrameBg, { 0, 0, 0, 0 });
+		ImGui::PushStyleColor(ImGuiCol_FrameBgActive, { 0, 0, 0, 0 });
+		ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, { 0, 0, 0, 0 });
+		ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.f);
+		char buf[256]{};
+
+		if (!ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))
+			std::copy(node->name.begin(), node->name.end() - 3, buf);
+
+		ImGui::SetNextItemWidth(maxItem.x - minItem.x);
+		if (ImGui::InputText("##Rename current Node", buf, 256))
+		{
+			if (ImGui::IsItemDeactivated())
+			{
+				node->name = buf;
+				node->name.append("###");
+				node->state_rename = false;
+			}
+		}
+
+		if (!ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))
+		{
+			ImGui::SetKeyboardFocusHere(-1);
+		}
+		ImGui::PopStyleColor(3);
+		ImGui::PopStyleVar();
+	}
+
+	void StateRenameChildHelper(RangeNode* node)
+	{
+		auto& style = ImGui::GetStyle();
+		auto minItem = ImGui::GetItemRectMin();
+		auto maxItem = ImGui::GetItemRectMax();
+		auto nodeTextOffset = ImGui::GetTreeNodeToLabelSpacing();
+		nodeTextOffset += style.FramePadding.x;
+		maxItem.x += ImGui::GetContentRegionAvailWidth() - nodeTextOffset;
+
+		minItem.x += nodeTextOffset;
+		ImGui::SetCursorScreenPos(minItem);
+		ImGui::PushStyleColor(ImGuiCol_FrameBg, { 0, 0, 0, 0 });
+		ImGui::PushStyleColor(ImGuiCol_FrameBgActive, { 0, 0, 0, 0 });
+		ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, { 0, 0, 0, 0 });
+		ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.f);
+		char buf[256]{};
+
+		if (!ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))
+			std::copy(node->name.begin(), node->name.end() - 3, buf);
+
+		ImGui::SetNextItemWidth(maxItem.x - minItem.x);
+		if (ImGui::InputText("##Rename current Node", buf, 256))
+		{
+			if (ImGui::IsItemDeactivated())
+			{
+				node->name = buf;
+				//node->name.append("###");
+				node->state_rename = false;
+			}
+		}
+
+		if (!ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))
+		{
+			ImGui::SetKeyboardFocusHere(-1);
+		}
+		ImGui::PopStyleColor(3);
+		ImGui::PopStyleVar();
+	}
+
+	std::string RealRecursiveTreeRange(std::vector<std::unique_ptr<RangeNode>>* nodes, std::string selMask, std::string& real_selected, int rec_level = 1, int id_start = 0)
 	{
 		auto& io = ImGui::GetIO();
 		auto& style = ImGui::GetStyle();
 		static uint64_t some_id = 1ll << 20;
 		ImVec2 curPos = {};
+		int result = NodeContextMenuResult_None;
+		RangeNode* to_delete_category = nullptr;
+		RangeNode* to_delete_range = nullptr;
+		bool selected_node = false;
 
+		auto selected_mask = selMask;
 		for (int i = 0; auto && node : *nodes)
 		{
+			i++;
 			if (!node->isHeader) continue;
-			ImGui::PushID(some_id + id_start + i++);
+			ImGui::PushID(some_id + id_start + i);
+			if (!selected_node)
+				selected_mask = selMask + ">" + std::to_string(i);
 
 			auto label = node->name;
 			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_None;
@@ -1767,83 +1863,122 @@ namespace widgets::EquiLand {
 
 			if (ImGui::BeginPopupContextItem())
 			{
-				auto result = NodeContextMenu(node.get(), *nodes);
+				result = NodeContextMenu(node.get(), *nodes);
 				ImGui::EndPopup();
-				// Don't know how to do it in a less dumb way
-				// The other way is to keep node_to_delete index
-				// and right after the loop delete everything
 				if (result == NodeContextMenuResult_Delete)
-				{
-					ImGui::PopID();
-					break;
-				}
+					to_delete_category = node.get();
 			}
 
 			if (node->state_rename)
 			{
-				auto minItem = ImGui::GetItemRectMin();
-				auto maxItem = ImGui::GetItemRectMax();
-				auto nodeTextOffset = ImGui::GetTreeNodeToLabelSpacing();
-				nodeTextOffset += style.FramePadding.x;
-
-				minItem.x += nodeTextOffset;
-				ImGui::SetCursorScreenPos(minItem);
-				ImGui::PushStyleColor(ImGuiCol_FrameBg, { 0, 0, 0, 0 });
-				ImGui::PushStyleColor(ImGuiCol_FrameBgActive, { 0, 0, 0, 0 });
-				ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, { 0, 0, 0, 0 });
-				ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.f);
-				char buf[256]{};
-
-				if (!ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))
-					std::copy(node->name.begin(), node->name.end() - 3, buf);
-
-				ImGui::SetNextItemWidth(maxItem.x - minItem.x);
-				if (ImGui::InputText("##Rename current Node", buf, 256))
-				{
-					if (ImGui::IsItemDeactivated())
-					{
-						node->name = buf;
-						node->name.append("###");
-						node->state_rename = false;
-					}
-				}
-
-				if (!ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))
-				{
-					ImGui::SetKeyboardFocusHere(-1);
-				}
-				ImGui::PopStyleColor(3);
-				ImGui::PopStyleVar();
+				StateRenameHelper(node.get());
 			}
 
 			if (open)
 			{
 				if (node->childs)
 				{
-					RealRecursiveTreeRange(node->childs, rec_level + 1, (i + 1) * 250);
-					
-					// Maybe additional push id is needed
-					for (auto&& child_node : *node->childs)
+					auto result = RealRecursiveTreeRange(node->childs, selected_mask, real_selected, rec_level + 1, (i + 1) * 250);
+					if (!result.empty() && result[result.size() - 1] == ';')
 					{
-						if (child_node->isHeader) continue;
-						curPos = ImGui::GetCursorScreenPos();
-						curPos.x += ImGui::GetTreeNodeToLabelSpacing() * rec_level;
-						ImGui::SetCursorScreenPos(curPos);
-						ImGui::Text(child_node->name.data());
+						selected_node = true;
+						selected_mask = result;
 					}
-				}
 
-				//ImGui::Text("IsItemsHovered: %d", ImGui::IsItemHovered());
-				//for (int i = 0; i < 5; i++)
-				//	ImGui::Text("Some contents %d", i);
+					// Maybe additional push id is needed
+					for (int j = 0; auto&& child_node : *node->childs)
+					{
+						++j;
+						if (child_node->isHeader) continue;
+						int id = some_id + 1000 + id_start + j;
+						ImGui::PushID(id);
+						bool selected = true;
+						int node_flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+						label = child_node->name.data();
+						if (child_node->state_rename)
+							label = ""; // = "###"
+
+						std::string complete_sel_mask = selected_mask + ">" + std::to_string(j) + ";";
+						if (real_selected == complete_sel_mask)
+						{
+							node_flags |= ImGuiTreeNodeFlags_Selected;
+						}
+
+						ImGui::TreeNodeEx((void*)(intptr_t)(id), node_flags, label.data());
+
+						//std::string selected_item = std::format("{}>{}");
+						
+						if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
+						{
+							selected_node = true;
+							selected_mask.append(">").append(std::to_string(j)).append(";");
+						}
+
+						if (ImGui::BeginPopupContextItem())
+						{
+							auto result = RangeContextMenu(child_node.get(), *node->childs);
+							ImGui::EndPopup();
+							if (result == NodeContextMenuResult_Delete)
+								to_delete_range = child_node.get();
+						}
+
+						if (child_node->state_rename)
+							StateRenameChildHelper(child_node.get());
+
+						ImGui::PopID();
+					}
+
+				}
 			}
 			ImGui::PopID();
 		}
+
+
+		if (to_delete_category)
+		{
+			auto& name = to_delete_category->name;
+			for (int i = 0; auto&& node : *nodes)
+			{
+				if (name == node->name)
+				{
+					DeleteNodeWithChilds(node->childs);
+					nodes->erase(nodes->begin() + i);
+					break;
+				}
+				i++;
+			}
+		}
+
+		if (to_delete_range)
+		{
+			auto& name = to_delete_range->name;
+			for (auto && node : *nodes)
+			{
+				for (int i = 0; auto&& child_node : *node->childs)
+				{
+					if (name == child_node->name)
+					{
+						node->childs->erase(node->childs->begin() + i);
+						break;
+					}
+					++i;
+				}
+			}
+		}
+
+		if (selected_node)
+			return selected_mask;
+		return "";
+		
 	}
 
 	void RecursiveTreeRange(std::vector<std::unique_ptr<RangeNode>>* nodes)
 	{
-		RealRecursiveTreeRange(nodes, 1, 0);
+		static std::string real_selected;
+		std::string sel_mask;
+		auto result = RealRecursiveTreeRange(nodes,sel_mask, real_selected, 1, 0);
+		if (!result.empty() && result[result.size() - 1] == ';')
+			real_selected = result;
 	}
 
 	void TreeRangeEditor()
@@ -1922,16 +2057,19 @@ namespace widgets::EquiLand {
 				if (ImGui::CollapsingHeader(filters[i], ImGuiTreeNodeFlags_None))
 				{
 					int node_clicked = -1;
-					const char* leafs[] = { "OR UTG-1", "OR CO", "OR BU" };
+					const char* leafs[] = { "OR UTG-1", "OR CO", "OR BU", "OR UTG-1", "OR CO", "OR BU", "OR UTG-1", "OR CO", "OR BU" };
+					size_t szLeafs = ARRAYSIZE(leafs);
 					static int selection_mask = (1 << 0);
 
-					for (int i = 0; i < 3; ++i)
+					for (int i = 0; i < szLeafs; ++i)
 					{
 						ImGuiTreeNodeFlags node_flags = base_flags;
 						const bool is_selected = (selection_mask & (1 << i)) != 0;
 						if (is_selected)
 							node_flags |= ImGuiTreeNodeFlags_Selected;
 						node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+
+
 
 						ImGui::TreeNodeEx((void*)(intptr_t)i, node_flags, leafs[i], i);
 						if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
