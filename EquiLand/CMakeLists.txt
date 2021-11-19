@@ -18,16 +18,21 @@ list(APPEND OMPEval_Sources "OMPEval/EquityCalculator.h" "OMPEval/Hand.h" "OMPEv
 list(APPEND OMPEval_Sources "OMPEval/HandEvaluator.cpp" "OMPEval/OffsetTable.hxx" "OMPEval/Random.h" "OMPEval/Util.h")
 
 set(		EquiLand_Sources "EquiLand.cpp" "includes_pch.h" "includes_pch.cpp")
-list(APPEND EquiLand_Sources "source/structures.hpp" "source/gui.hpp" "source/custom_widgets.hpp" "source/Freetype.hpp")
+list(APPEND EquiLand_Sources "source/structures.hpp" "source/gui.hpp" "source/Freetype.hpp")
 list(APPEND EquiLand_Sources "source/Settings.hpp"  "source/Application.h" "source/Application.cpp")
 list(APPEND EquiLand_Sources "source/Styles.hpp" "source/Fonts.hpp" "source/Notifications.hpp")
-list(APPEND EquiLand_Sources "source/utils/ColorHelpers.hpp")
+list(APPEND EquiLand_Sources "source/utils/ColorHelpers.hpp" "source/ApplicationMenu.hpp")
+
+set(		EquiLand_Widgets_Sources "source/widgets/BasicCustomWidgets.hpp"	"source/widgets/AnimatedCustomWidgets.hpp")
+list(APPEND EquiLand_Widgets_Sources "source/widgets/RangeSelect.hpp"			"source/widgets/IncludeAllWidgets.hpp")
+list(APPEND EquiLand_Widgets_Sources "source/widgets/CardSelection.hpp"			"source/widgets/TreeRangeEditor.hpp")
+list(APPEND EquiLand_Widgets_Sources "source/widgets/BoardSelect.hpp"			"source/widgets/DeadCardsSelect.hpp")
 
 set(		EquiLand_Fonts_Sources "fonts/DefinesFontAwesome.hpp" "fonts/BinaryFontAwesome.hpp")
 list(APPEND EquiLand_Fonts_Sources "fonts/BinaryFontRoboto.hpp")
 
 set(		EquiLand_Project_Sources ${ImGui_Docking_Sources} ${EquiLand_Sources} ${OMPEval_Sources})
-list(APPEND EquiLand_Project_Sources ${EquiLand_Fonts_Sources})
+list(APPEND EquiLand_Project_Sources ${EquiLand_Fonts_Sources} ${EquiLand_Widgets_Sources})
 
 # disable warnings from imgui
 set_source_files_properties(
