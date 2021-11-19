@@ -291,6 +291,20 @@ namespace widgets::EquiLand {
 		return result;
 	}
 
+	constexpr size_t nChoosek(size_t n, size_t k)
+	{
+		if (k > n) return 0;
+		if (k * 2 > n) k = n - k;
+		if (k == 0) return 1;
+
+		int result = n;
+		for (int i = 2; i <= k; ++i) {
+			result *= (n - i + 1);
+			result /= i;
+		}
+		return result;
+	}
+
 	void RangeSelect(CardMatrix& matrix)
 	{
 		auto& style = ImGui::GetStyle();
@@ -300,6 +314,8 @@ namespace widgets::EquiLand {
 			{6, '8'}, {7, '7'},   {8, '6'}, {9, '5'}, {10, '4'},  {11, '3'}, {12, '2'}
 		};
 
+		constexpr auto total_combos = nChoosek(52, 2);
+		size_t current_combos = 0;
 		auto& selected = matrix.cards;
 		//static bool selected[13 * 13] = {};
 		static int start_pos = -1;
@@ -331,6 +347,7 @@ namespace widgets::EquiLand {
 				ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.501, 0, 0.501, 1.00f));
 				if (x > y)
 				{
+					if (cur_state) current_combos += 12;
 					postfix = "o";
 					//ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.184, 0.019, 1, 1.f));
 					ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.862, 0.078, 0.235, 0.55f));
@@ -340,6 +357,7 @@ namespace widgets::EquiLand {
 				}
 				else if (x != y)
 				{
+					if (cur_state) current_combos += 4;
 					postfix = "s";
 					ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.24f, 0.27f, 0.20f, 1.00f));
 					//ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.27f, 0.30f, 0.23f, 1.00f));
@@ -348,6 +366,7 @@ namespace widgets::EquiLand {
 				}
 				else
 				{
+					if (cur_state) current_combos += 6;
 					ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0, 0, 0.501, 0.82f));
 					//ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.603, 0.803, 0.196, 0.83f));
 					//ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.678f, 1.f, 0.184f, 0.86f));
@@ -476,6 +495,9 @@ namespace widgets::EquiLand {
 			std::fill(selected, selected + 169, 0);
 			str_range = "Empty Range";
 		}
+		ImGui::SameLine();
+		float percentage_range = (float)current_combos / total_combos * 100.f;
+		ImGui::Text(std::format("Combos: {}/{} ({:.2f}%% range)", current_combos, total_combos, percentage_range).data());
 		auto max_width = ImGui::GetContentRegionAvailWidth();
 		ImGui::InputTextEx("##Range result", "Some Range", str_range.data(), str_range.size(), ImVec2(max_width, 0), ImGuiInputTextFlags_ReadOnly);
 		if (ImGui::BeginPopupContextItem())
