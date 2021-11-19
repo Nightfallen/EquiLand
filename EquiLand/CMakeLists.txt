@@ -21,6 +21,7 @@ set(		EquiLand_Sources "EquiLand.cpp" "includes_pch.h" "includes_pch.cpp")
 list(APPEND EquiLand_Sources "source/structures.hpp" "source/gui.hpp" "source/custom_widgets.hpp" "source/Freetype.hpp")
 list(APPEND EquiLand_Sources "source/Settings.hpp"  "source/Application.h" "source/Application.cpp")
 list(APPEND EquiLand_Sources "source/Styles.hpp" "source/Fonts.hpp" "source/Notifications.hpp")
+list(APPEND EquiLand_Sources "source/utils/ColorHelpers.hpp")
 
 set(		EquiLand_Fonts_Sources "fonts/DefinesFontAwesome.hpp" "fonts/BinaryFontAwesome.hpp")
 list(APPEND EquiLand_Fonts_Sources "fonts/BinaryFontRoboto.hpp")

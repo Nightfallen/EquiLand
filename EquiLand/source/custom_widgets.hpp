@@ -3,6 +3,7 @@
 
 #include <includes_pch.h>
 
+#include <source/utils/ColorHelpers.hpp>
 #include <fonts/DefinesFontAwesome.hpp>
 #include "OMPEval/HandEvaluator.h"
 #include "OMPEval/EquityCalculator.h"
@@ -629,23 +630,10 @@ namespace widgets {
 		bool is_disabled = cur_item_flags & ImGuiItemFlags_Disabled;
 		if (is_disabled)
 		{
-			auto NormalizeColor = [](uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
-				return ImVec4(r / 255.f, g / 255.f, b / 255.f, a / 255.f);
-			};
-			auto a = bg_color >> 24;
-			auto b = (bg_color << 8) >> 8 + 16;
-			auto g = (bg_color << 16) >> 16 + 8;
-			auto r = (bg_color << 24) >> 24;
-
-			int darken_factor = 15; // %
-			r -= r / darken_factor;
-			g -= g / darken_factor;
-			b -= b / darken_factor;
-			//a -= a / darken_factor;
-
-			bg_color = IM_COL32(r, g, b, a);
+			bg_color = helpers::DarkenColor(bg_color, 15);
 		}
-		if (!ImGui::IsItemHovered() && !ImGui::IsItemActive() && !*p_selected)
+		// !ImGui::IsItemActive()
+		if (!ImGui::IsItemHovered() && !*p_selected)
 		{
 			// Render background behind Selectable().
 			draw_list->ChannelsSetCurrent(0);
@@ -1462,6 +1450,9 @@ namespace widgets::EquiLand {
 				auto flags = ImGuiSelectableFlags_SelectOnClick;
 				auto prev_value = selectables[13 * x + y];
 				auto& cur_value = selectables[13 * x + y];
+
+				ImGui::PushStyleColor(ImGuiCol_Header, helpers::BrightenColor(bg_color, 15));
+				ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.501, 0, 0.501, 1.00f));
 				if (CustomSelectable(label.data(), &selectables[13 * x + y], bg_color, flags, ImVec2(40, 40)))
 				{
 					bool value_changed = prev_value && !cur_value;
@@ -1486,6 +1477,7 @@ namespace widgets::EquiLand {
 					else if (szArr != hero_hand.size())
 						hero_hand[szArr++] = label;
 				}
+				ImGui::PopStyleColor(2);
 				ImGui::EndDisabled();
 				separator = true;
 			}
