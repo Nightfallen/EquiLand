@@ -472,16 +472,20 @@ namespace widgets::EquiLand {
 		}
 
 		if (ImGui::Button("Clear all"))
-			std::fill(selected, selected + 169, 0);
-		ImGui::SameLine();
-		if (ImGui::Button("Generate range"))
 		{
-			auto str_data = BuildRangeString(selected);
-			matrix.range = str_data;
-			if (!str_data.empty())
-				str_range = str_data;
+			std::fill(selected, selected + 169, 0);
+			str_range = "Empty Range";
 		}
-		ImGui::Text(str_range.data());
+		auto max_width = ImGui::GetContentRegionAvailWidth();
+		ImGui::InputTextEx("##Range result", "Some Range", str_range.data(), str_range.size(), ImVec2(max_width, 0), ImGuiInputTextFlags_ReadOnly);
+		if (ImGui::BeginPopupContextItem())
+		{
+			if (ImGui::MenuItemEx("Copy Range", ICON_FA_LINK))
+			{
+				ImGui::SetClipboardText(str_range.data());
+			}
+			ImGui::EndPopup();
+		}
 	}
 
 }
