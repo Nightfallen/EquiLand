@@ -13,6 +13,8 @@
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
+#if defined(_WIN_BUILD)
+
 #pragma once
 #include "imgui.h"      // IMGUI_IMPL_API
 
@@ -41,3 +43,6 @@ IMGUI_IMPL_API float    ImGui_ImplWin32_GetDpiScaleForMonitor(void* monitor); //
 // - Use to enable alpha compositing transparency with the desktop.
 // - Use together with e.g. clearing your framebuffer with zero-alpha.
 IMGUI_IMPL_API void     ImGui_ImplWin32_EnableAlphaCompositing(void* hwnd);   // HWND hwnd
+
+#else
+#endif

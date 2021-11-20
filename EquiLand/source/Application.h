@@ -5,6 +5,7 @@
 #include <source/structures.hpp>
 #include <source/Freetype.hpp>
 
+#if defined(_WIN_BUILD)
 class Application {
 	const wchar_t* wndClassName = L"EquiLand App Class";
 	const wchar_t* wndName = L"EquiLand";
@@ -37,5 +38,25 @@ public:
 
 	HWND GetHWND();
 };
+#elif defined(_LINUX_BUILD) // !_WIN_BUILD
+
+class Application {
+	const char* glsl_version = "#version 130";
+	const char* wndName = "EquiLand";
+	FreetypeTest freetypeTest;
+	ProcUIHandler ui_handler = nullptr;
+	GLFWwindow* window_ = nullptr;
+
+	void InitializeWindow();
+	void InitializeImGui();
+public:
+	Application();
+	~Application();
+
+	void SetUIHandler(ProcUIHandler handler);
+	void Run();
+};
+#endif
+
 
 #endif // !SOURCE_APPLICATION_H

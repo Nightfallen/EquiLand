@@ -43,6 +43,7 @@ namespace {
 		default:
 			break;
 		}
+		return -1;
 	}
 
 	char EnumToCard(int rank)
@@ -78,6 +79,7 @@ namespace {
 		default:
 			break;
 		}
+		return -1;
 	}
 
 	std::string RebuildDashedRange(const std::string& range)
@@ -95,7 +97,8 @@ namespace {
 
 			for (auto card = card1; card >= card2; --card)
 			{
-				result.append(std::format("{}{}{}", separator, first_card, EnumToCard(card)));
+				auto temp_vla = std::format("{}{}{}", separator, first_card, EnumToCard(card));
+				result.append(temp_vla);
 				separator = ",";
 			}
 		}
@@ -190,7 +193,7 @@ namespace widgets::EquiLand {
 			equity.wait();
 			auto res = equity.getResults();
 			std::cout << "Number of " << res.evaluations << std::endl;
-			output =
+			constexpr const char* output2 =
 				"Equity: {:#3.3f} %%\n"
 				"Win:    {:#3.3f} %%\n"
 				"Tie:    {:#3.3f} %%";
@@ -200,7 +203,7 @@ namespace widgets::EquiLand {
 			float eq_percent = res.equity[1] * 100.f;
 			float wins_percent = res.wins[1] / (float)total * 100.f;
 			float ties_percent = res.ties[1] / (float)total * 100.f;
-			result_str = std::format(output, eq_percent, wins_percent, ties_percent);
+			result_str = std::format(output2, eq_percent, wins_percent, ties_percent);
 			changed_values = false;
 		}
 

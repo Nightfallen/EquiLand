@@ -2,6 +2,8 @@
 #define SOURCE_APPLICATIONMENU_HPP
 
 #include <includes_pch.h>
+#include <source/widgets/BasicCustomWidgets.hpp>
+#include <source/widgets/AnimatedCustomWidgets.hpp>
 
 bool PopupAbout(bool* is_open)
 {
@@ -15,8 +17,9 @@ bool PopupAbout(bool* is_open)
 		if (widgets::HyperLinkText("Github Page", "https://github.com/Nightfallen/EquiLand", clicked))
 			clicked = true;
 
-		if (ImGui::IsKeyPressed(VK_ESCAPE))
-			*is_open = false;
+		// Rewrite to cross-platform
+		//if (ImGui::IsKeyPressed(VK_ESCAPE))
+		//	*is_open = false;
 		ImGui::EndPopup();
 	}
 	return result;
@@ -88,12 +91,12 @@ bool PopupSettings(bool* is_open)
 
 		//if (ImGui::Button("msg box"))
 		widgets::AltMessageBox();
-
-		if (io.KeysDown[VK_ESCAPE])
-		{
-			*is_open = false;
-			ImGui::CloseCurrentPopup();
-		}
+		// Rewrite to cross-platform
+		//if (io.KeysDown[VK_ESCAPE])
+		//{
+		//	*is_open = false;
+		//	ImGui::CloseCurrentPopup();
+		//}
 
 		ImGui::EndPopup();
 	}

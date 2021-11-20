@@ -77,7 +77,8 @@ void PlaygroundWindow(bool* is_open)
 	ImGui::End();
 }
 
-void UI_HANDLER(HWND hwnd)
+//void UI_HANDLER(HWND hwnd)
+void UI_HANDLER()
 {
 	// Our state
 	static NotificationSystem notifySystem;
@@ -101,11 +102,17 @@ void UI_HANDLER(HWND hwnd)
 	static bool show_equiland_window = true;
 	static bool show_temp_window = false;
 
+	//if (!show_demo_window)
+	//	PostMessage(hwnd, WM_CLOSE, 0, 0);
+	//ImGui::ShowDemoWindow(&show_demo_window);
+	//if (!show_equiland_window)
+	//	PostMessage(hwnd, WM_CLOSE, 0, 0);
 	if (!show_demo_window)
-		PostMessage(hwnd, WM_CLOSE, 0, 0);
+		exit(0);
 	ImGui::ShowDemoWindow(&show_demo_window);
 	if (!show_equiland_window)
-		PostMessage(hwnd, WM_CLOSE, 0, 0);
+		exit(0);
+
 	CustomWindow(&show_equiland_window);
 	if (show_temp_window)
 		PlaygroundWindow(&show_temp_window);

@@ -9,6 +9,8 @@
 // But as it's notification it shouldn't be shown in the taskbar (WS_EX_TOOLWINDOW in windows)
 // I ran out of ideas for now, i want to sleep :)
 
+#if defined(_WIN_BUILD)
+
 int GetCurrentMonitor()
 {
 	auto cur_window = ImGui::GetCurrentWindow();
@@ -150,5 +152,26 @@ public:
 
 	}
 };
+
+#else
+int GetCurrentMonitor() { return 0; }
+ImVec2 GetMonitorResolution(int idMonitor = GetCurrentMonitor()) { return { 0, 0 }; }
+
+class NotificationSystem {
+
+public:
+	NotificationSystem() {}
+	~NotificationSystem() {}
+
+	void AddNotification(std::string_view label, std::string_view text) {}
+
+	void AddNotificationIcon(std::string_view label, std::string_view text, std::string_view icon, ImVec4 icon_color = ImVec4(30, 144, 255, 255)) {}
+
+	void AddNotificationCustomElements(std::string_view label, std::string_view icon, ImVec4 icon_color, std::function<void()> callback) {}
+
+	void RenderNotifications() {}
+};
+
+#endif
 
 #endif // !SOURCE_NOTIFICATIONS_HPP

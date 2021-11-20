@@ -4,14 +4,12 @@
 // C++ headers
 #include <algorithm>
 #include <array>
-#include <bit>
 #include <charconv>
 #include <chrono>
 #include <compare>
 #include <concepts>
 #include <ctime>
 #include <filesystem>
-#include <format>
 #include <fstream>
 #include <functional>
 #include <future>
@@ -24,7 +22,6 @@
 #include <random>
 #include <ranges>
 #include <regex>
-#include <source_location>
 #include <string_view>
 #include <string>
 #include <thread>
@@ -58,7 +55,12 @@
 	#define UNICODE
 	#define _UNICODE
 	#endif
+	#define _WIN_BUILD	
 
+	#include <format>
+	// I'm not sure if i need this header at all?
+	//#include <source_location>
+	
 	#define WIN32_LEAN_AND_MEAN
 	#include <Windows.h>
 	#include <d3d11.h>
@@ -72,13 +74,29 @@
 	#else
 	#endif
 // #TODO: Support of other OS'es, at least Linux and MacOS
-#elif !defined(_WIN32)
-#error "Only Windows platform is supported"
-#elif __APPLE__	
+#elif defined(linux) || defined(__linux__) || defined(__unix__) || defined(_POSIX_VERSION)
+	#define	_LINUX_BUILD
+	#define INFINITE            0xFFFFFFFF  // Infinite timeout
+	// vcpkg 
+	#define FMT_HEADER_ONLY
+	#include <fmt/format.h>
+
+	namespace std
+	{
+		using fmt::format;
+	}
+
+#include <imgui/imgui_impl_glfw.h>
+#include <imgui/imgui_impl_opengl3.h>
+#include <imgui/imgui_impl_opengl3_loader.h>
+#include <GLFW/glfw3.h>
+
+#elif defined(__APPLE__)
+#error "Apple platform currently isn't supported"
 #include <TargetConditionals.h>
 #if TARGET_IPHONE_SIMULATOR
 	 // iOS Simulator
-#if TARGET_OS_MACCATALYST
+#elif TARGET_OS_MACCATALYST
 	 // Mac's Catalyst (ports iOS API into Mac, like UIKit).
 #elif TARGET_OS_IPHONE
 	// iOS device
@@ -86,12 +104,6 @@
 	// Other kinds of Mac OS
 #else
 #error "Unknown Apple platform"
-#endif
-#elif __linux__
-#elif __unix__
-#elif defined(_POSIX_VERSION)
-#else
-#error "Unknown compiler"
 #endif
 #endif
 

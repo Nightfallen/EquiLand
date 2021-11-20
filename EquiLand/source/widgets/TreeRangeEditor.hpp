@@ -357,7 +357,7 @@ namespace widgets::EquiLand {
 
 		// Buttons to add/delete headers
 		const char* edit_buttons[] = { ICON_FA_PLUS_CIRCLE, ICON_FA_FILE, ICON_FA_LIST };
-		size_t sz_Arr = ARRAYSIZE(edit_buttons);
+		size_t sz_Arr = IM_ARRAYSIZE(edit_buttons);
 
 		bool separator = false;
 		for (int i = 0; i < sz_Arr; ++i)
@@ -425,7 +425,7 @@ namespace widgets::EquiLand {
 				{
 					int node_clicked = -1;
 					const char* leafs[] = { "OR UTG-1", "OR CO", "OR BU", "OR UTG-1", "OR CO", "OR BU", "OR UTG-1", "OR CO", "OR BU" };
-					size_t szLeafs = ARRAYSIZE(leafs);
+					size_t szLeafs = IM_ARRAYSIZE(leafs);
 					static int selection_mask = (1 << 0);
 
 					for (int i = 0; i < szLeafs; ++i)
