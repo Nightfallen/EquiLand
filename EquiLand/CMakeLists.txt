@@ -63,13 +63,19 @@ find_package(libdivide CONFIG REQUIRED)
 target_link_libraries(EquiLand PRIVATE libdivide::libdivide)
 
 
-if (MSVC)
-find_package(freetype CONFIG REQUIRED)
-target_link_libraries(EquiLand PRIVATE ${FREETYPE_LIBRARIES})
-target_include_directories(EquiLand PRIVATE ${FREETYPE_INCLUDE_DIRS})
+if (WIN32 OR MSVC)
+find_package(Freetype REQUIRED)
+target_link_libraries(EquiLand PRIVATE Freetype::Freetype)
+#target_link_libraries(EquiLand PRIVATE ${FREETYPE_LIBRARIES})
+#target_include_directories(EquiLand PRIVATE ${FREETYPE_INCLUDE_DIRS})
 
-else()
+endif(WIN32 OR MSVC)
 
+if(UNIX AND NOT APPLE)
+        set(LINUX TRUE)
+endif(UNIX AND NOT APPLE)
+
+if (LINUX)
 find_package(Freetype REQUIRED)
 target_link_libraries(EquiLand PRIVATE Freetype::Freetype)
 
@@ -83,7 +89,7 @@ target_link_libraries(EquiLand PRIVATE glfw)
 
 add_compile_options(-I/opt/vcpkg/installed/x64-linux/include)
 
-endif()
+endif(LINUX)
 
 
 target_link_libraries(EquiLand PRIVATE libpeval)
