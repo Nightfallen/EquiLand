@@ -215,6 +215,14 @@ namespace widgets::EquiLand {
 		ImVec2 marker_max = ImVec2(pos.x + wrap_width + 10, pos.y + ImGui::GetTextLineHeight());
 		ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
 		ImGui::Text(result_str.empty() ? output : result_str.data());
+		if (ImGui::BeginPopupContextItem("some_id"))
+		{
+			if (ImGui::MenuItemEx("Copy Equity %", ICON_FA_LINK))
+			{
+				ImGui::SetClipboardText(result_str.empty() ? output : result_str.data());
+			}
+			ImGui::EndPopup();
+		}
 	}
 }
 

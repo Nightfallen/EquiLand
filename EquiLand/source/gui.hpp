@@ -138,7 +138,7 @@ void UI_HANDLER()
 		auto& alpha = ImGui::GetStyle().Alpha;
 		auto sub_alpha = alpha - frequency * deltaTime;
 		std::cout << std::format("Sub alpha: {}\n", sub_alpha);
-		alpha = std::max(sub_alpha, 0.f);//ImClamp(sub_alpha, 0.f, 1.f);
+		alpha = ImClamp(sub_alpha, 0.f, 1.f);
 		if (alpha == 0)
 			exit(0);
 	}
