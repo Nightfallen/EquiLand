@@ -42,24 +42,28 @@ void CustomWindow(bool* is_open)
 	if (ImGui::BeginChild("child1", ImVec2(child_w1, h), true))
 	{
 		widgets::EquiLand::TreeRangeEditor();
-		ImGui::EndChild();
+		
 	}
+	ImGui::EndChild();
+
 	ImGui::SameLine();
 	widgets::Splitter("##Splitter2", true, 8.f, &spl2, &spl3, 8, 8, h);
 	ImGui::SameLine();
 	if (ImGui::BeginChild("child2", ImVec2(child_w2, h), true))
 	{
 		widgets::EquiLand::RangeSelect(range_matrix);
-		ImGui::EndChild();
 	}
+	ImGui::EndChild();
+
 	ImGui::SameLine();
 	widgets::Splitter("##Splitter3", true, 8.f, &spl3, &spl4, 8, 8, h);
 	ImGui::SameLine();
 	if (ImGui::BeginChild("child3", ImVec2(child_w3, h), true))
 	{	
 		widgets::EquiLand::BoardSelect<5>(board_cards, true, dead_cards);
-		ImGui::EndChild();
 	}
+	ImGui::EndChild();
+
 	ImGui::SameLine();
 	ImGui::BeginChild("child4", ImVec2(child_w4, h), true);
 	widgets::EquiLand::DeadCardsSelect<2>(dead_cards, range, true, board_cards);
@@ -110,13 +114,37 @@ void UI_HANDLER()
 	if (!show_demo_window)
 		exit(0);
 	ImGui::ShowDemoWindow(&show_demo_window);
-	if (!show_equiland_window)
-		exit(0);
+
+
+	static bool first_time = true;
+	if (first_time)
+	{
+		ImGui::GetStyle().Alpha = 0.f;
+		first_time = false;
+	}
+
+	{
+		constexpr auto frequency = 1.2f;
+		auto deltaTime = ImGui::GetIO().DeltaTime;
+		auto& alpha = ImGui::GetStyle().Alpha;
+		alpha = ImClamp(alpha + frequency * deltaTime, 0.f, 1.f);
+	}
 
 	CustomWindow(&show_equiland_window);
+	if (!show_equiland_window)
+	{
+		constexpr auto frequency = 1.f / 0.5f;
+		auto deltaTime = ImGui::GetIO().DeltaTime;
+		auto& alpha = ImGui::GetStyle().Alpha;
+		auto sub_alpha = alpha - frequency * deltaTime;
+		std::cout << std::format("Sub alpha: {}\n", sub_alpha);
+		alpha = std::max(sub_alpha, 0.f);//ImClamp(sub_alpha, 0.f, 1.f);
+		if (alpha == 0)
+			exit(0);
+	}
+
 	if (show_temp_window)
 		PlaygroundWindow(&show_temp_window);
-
 	notifySystem.RenderNotifications();
 }
 

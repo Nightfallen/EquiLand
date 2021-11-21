@@ -66,8 +66,8 @@
 	#include <d3d11.h>
 	#include <dxgi.h>
 	#include <tchar.h>
-	#include "imgui/imgui_impl_dx11.h"
-	#include "imgui/imgui_impl_win32.h"
+	#include <imgui/imgui_impl_dx11.h>
+	#include <imgui/imgui_impl_win32.h>
 	#pragma comment(lib, "d3d11.lib")
 	#pragma comment(lib, "dxgi.lib")
 	#ifdef _WIN64

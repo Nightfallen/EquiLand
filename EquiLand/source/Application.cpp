@@ -164,7 +164,6 @@ void Application::InitializeImgui()
 	// Setup Platform/Renderer backends
 	ImGui_ImplWin32_Init(hwnd_);
 	ImGui_ImplDX11_Init(g_pd3dDevice, g_pd3dDeviceContext);
-
 	BuildDefaultFont(io);
 	freetypeTest = {};
 }

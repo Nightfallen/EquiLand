@@ -45,6 +45,8 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#if defined(_LINUX_BUILD)
+
 #ifndef __gl3w_h_
 #define __gl3w_h_
 
@@ -749,4 +751,7 @@ static void load_procs(GL3WGetProcAddressProc proc)
 #ifdef __cplusplus
 }
 #endif
+#endif
+
+#else
 #endif
