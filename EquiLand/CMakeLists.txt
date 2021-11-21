@@ -1,22 +1,8 @@
 ﻿# CMakeList.txt : CMake project for EquiLand, include source and define
 # project specific logic here.
-#
 cmake_minimum_required (VERSION 3.8)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-if(MSVC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.29.00000)
-# Due to 'https://docs.microsoft.com/en-us/cpp/build/reference/std-specify-language-standard-version?view=msvc-170'
-# '/std:c++20' doesn't include 'std::format', '<chrono> formatting extensions', '<ranges> factories and adaptors'
-# So temporarily using a little workaround for msvc
-	add_compile_options(/std:c++latest)
-else(MSVC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.31.00000)
-	if (CMAKE_VERSION VERSION_GREATER 3.20.3)
-		set(CMAKE_CXX_STANDARD 23)
-	else()
-		add_compile_options(/std:c++latest)
-	endif()
-endif()
- 
 # Add source to this project's executable.
 set(		ImGui_Docking_Sources "imgui/imconfig.h" "imgui/imgui.cpp" "imgui/imgui.h" "imgui/imgui_demo.cpp")
 list(APPEND ImGui_Docking_Sources "imgui/imgui_draw.cpp" "imgui/imgui_internal.h" "imgui/imgui_tables.cpp")
@@ -24,8 +10,8 @@ list(APPEND ImGui_Docking_Sources "imgui/imgui_widgets.cpp" "imgui/imstb_rectpac
 list(APPEND ImGui_Docking_Sources "imgui/imstb_truetype.h" "imgui/imgui_impl_dx11.cpp" "imgui/imgui_impl_dx11.h")
 list(APPEND ImGui_Docking_Sources "imgui/imgui_impl_win32.cpp" "imgui/imgui_impl_win32.h")
 list(APPEND ImGui_Docking_Sources "imgui/imgui_freetype.cpp" "imgui/imgui_freetype.h")
-#list(APPEND ImGui_Docking_Sources "imgui/imgui_impl_glfw.cpp" "imgui/imgui_impl_glfw.h")
-#list(APPEND ImGui_Docking_Sources "imgui/imgui_impl_opengl3.cpp" "imgui/imgui_impl_opengl3.h" "imgui/imgui_impl_opengl3_loader.h")
+list(APPEND ImGui_Docking_Sources "imgui/imgui_impl_glfw.cpp" "imgui/imgui_impl_glfw.h")
+list(APPEND ImGui_Docking_Sources "imgui/imgui_impl_opengl3.cpp" "imgui/imgui_impl_opengl3.h" "imgui/imgui_impl_opengl3_loader.h")
 
 set(		OMPEval_Sources "OMPEval/CardRange.cpp" "OMPEval/CardRange.h" "OMPEval/CombinedRange.cpp")
 list(APPEND OMPEval_Sources "OMPEval/CombinedRange.h" "OMPEval/Constants.h" "OMPEval/EquityCalculator.cpp")
@@ -34,7 +20,7 @@ list(APPEND OMPEval_Sources "OMPEval/HandEvaluator.cpp" "OMPEval/OffsetTable.hxx
 
 set(		EquiLand_Sources "EquiLand.cpp" "includes_pch.h" "includes_pch.cpp")
 list(APPEND EquiLand_Sources "source/structures.hpp" "source/gui.hpp" "source/Freetype.hpp")
-list(APPEND EquiLand_Sources "source/Settings.hpp"  "source/Application.h" "source/Application.cpp")
+list(APPEND EquiLand_Sources "source/AppSettings.hpp"  "source/Application.h" "source/Application.cpp")
 list(APPEND EquiLand_Sources "source/Styles.hpp" "source/Fonts.hpp" "source/Notifications.hpp")
 list(APPEND EquiLand_Sources "source/utils/ColorHelpers.hpp" "source/ApplicationMenu.hpp")
 
@@ -56,58 +42,43 @@ set_source_files_properties(
   COMPILE_FLAGS "-w"
 )
 
-# LiStarted implementing Notificationsnking all sources
+# Linking all sources
 add_executable (EquiLand ${EquiLand_Project_Sources})
 
-
-
 # External libraries handling
-
-
 find_package(libdivide CONFIG REQUIRED)
 target_link_libraries(EquiLand PRIVATE libdivide::libdivide)
 
-
 if (WIN32 OR MSVC)
-find_package(freetype CONFIG REQUIRED)
-target_link_libraries(EquiLand PRIVATE freetype)
+	find_package(freetype CONFIG REQUIRED)
+	target_link_libraries(EquiLand PRIVATE freetype)
+endif()
 
-#if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.31.30129)
-#find_package(freetype CONFIG REQUIRED)
-#target_link_libraries(EquiLand PRIVATE ${FREETYPE_LIBRARIES})
-#target_include_directories(EquiLand PRIVATE ${FREETYPE_INCLUDE_DIRS})
-#else()
-#find_package(Freetype REQUIRED)
-#target_link_libraries(EquiLand PRIVATE Freetype::Freetype)
-#endif()
-
-endif(WIN32 OR MSVC)
-
-if(UNIX AND NOT APPLE)
+if(UNIX AND NOT APPLE AND NOT MSVC)
 	set(LINUX TRUE)
-endif(UNIX AND NOT APPLE)
+endif()
 
-if (LINUX AND NOT MSVC)
-find_package(Freetype REQUIRED)
-target_link_libraries(EquiLand PRIVATE Freetype::Freetype)
+if (LINUX)
+	find_package(Freetype REQUIRED)
+	target_link_libraries(EquiLand PRIVATE Freetype::Freetype)
 
-find_package(fmt CONFIG REQUIRED)
-target_link_libraries(EquiLand PRIVATE fmt::fmt-header-only)
+	find_package(fmt CONFIG REQUIRED)
+	target_link_libraries(EquiLand PRIVATE fmt::fmt-header-only)
 
-find_package(OpenGL REQUIRED)
-target_link_libraries(EquiLand PRIVATE OpenGL::GL)
-find_package(glfw3 3.3 REQUIRED)
-target_link_libraries(EquiLand PRIVATE glfw)
+	find_package(OpenGL REQUIRED)
+	target_link_libraries(EquiLand PRIVATE OpenGL::GL)
 
-add_compile_options(-I/opt/vcpkg/installed/x64-linux/include)
+	find_package(glfw3 3.3 REQUIRED)
+	target_link_libraries(EquiLand PRIVATE glfw)
 
+	add_compile_options(-I/opt/vcpkg/installed/x64-linux/include)
 endif(LINUX)
-
 
 target_link_libraries(EquiLand PRIVATE libpeval)
 
 # Post-lib project setup
-target_precompile_headers(EquiLand PRIVATE "includes_pch.h")
+target_precompile_headers(EquiLand PUBLIC "includes_pch.h")
+# Force include precompiled header
 if(MSVC)
 	add_definitions(/FI"includes_pch.h")
 else()

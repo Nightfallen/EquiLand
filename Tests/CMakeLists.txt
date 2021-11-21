@@ -7,9 +7,12 @@ include_directories(${GTEST_INCLUDE_DIRS})
 
 # Unit Tests
 # Add test cpp file
+
+include_directories("${PROJECT_SOURCE_DIR}/EquiLand")
 add_executable( EquiLandTests "tests_app.cpp")
-target_link_libraries(EquiLandTests ${GTEST_BOTH_LIBRARIES})
-target_link_libraries(EquiLandTests )
+target_precompile_headers(EquiLandTests REUSE_FROM ${PROJECT_NAME})
+target_link_libraries(EquiLandTests PRIVATE ${GTEST_BOTH_LIBRARIES})
+#target_link_libraries(EquiLandTests PRIVATE ${PROJECT_NAME}_lib) #
 add_test( NAME EquiLandTests COMMAND EquiLandTests )
 
 # library tests
