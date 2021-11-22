@@ -85,4 +85,22 @@ namespace VKEYS {
 	};
 }
 
+bool IsKeyPressed(int key_code)
+{
+#if defined(_WIN_BUILD)
+	return GetKeyState(key_code) & 0x8000;
+#elif defined(_LINUX_BUILD)
+	auto& io = ImGui::GetIO();
+	return io.KeysDown[key_code];
+#endif
+}
+
+// It's possible to create any shortcut, even 'CTRL+K+L+Q+W+E'
+// But all keys need to be pressed simultaneously
+template<typename... Values>
+bool ShortCut(Values const&... values)
+{
+	return (IsKeyPressed(values) && ...);
+}
+
 #endif // !SOURCE_KEYBOARD_HPP

@@ -115,6 +115,20 @@ void CreateMainMenuBar()
 	static bool popup = false;
 	static bool popup_settings = false;
 	static void(*ShowPopup)() = []() {};
+
+	// Now Imgui's menu bar doesn't support shortcuts
+	// So using temp workaround
+	// Soon single (lambda) function can be used for both if clauses (menuitem and shortcut)
+
+	if (ShortCut(VKEYS::CTRL, VKEYS::P))
+		popup_settings = true;
+	if (ShortCut(VKEYS::CTRL, VKEYS::I))
+		;
+	if (ShortCut(VKEYS::ALT, VKEYS::F4))
+	{
+		// #TODO: add handling of this shortcut
+	}
+
 	if (ImGui::BeginMenuBar())
 	{
 		if (ImGui::BeginMenu("File##my_file"))

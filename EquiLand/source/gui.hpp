@@ -94,6 +94,8 @@ void CustomWindow(bool* is_open)
 // Playground window
 void PlaygroundWindow(bool* is_open)
 {
+	auto& io = ImGui::GetIO();
+	auto& style = ImGui::GetStyle();
 	ImGui::SetNextWindowSize(ImVec2(1000, 600), ImGuiCond_Once);
 	ImGui::Begin("##window_no_name1", is_open);
 
