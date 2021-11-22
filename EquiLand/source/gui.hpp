@@ -7,6 +7,7 @@
 #include <source/Notifications.hpp>
 #include <source/ApplicationMenu.hpp>
 #include <source/AppSettings.hpp>
+#include <source/Keyboard.hpp>
 
 void CustomWindow(bool* is_open)
 {

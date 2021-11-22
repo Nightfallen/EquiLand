@@ -108,7 +108,7 @@ auto ReadRanges(std::string path) -> std::vector<std::unique_ptr<RangeNode>>*
 
 	json j = json::parse(result.begin(), result.end(), nullptr, false);
 	if (j.is_discarded())
-		assert(true, "Json is discrarded");
+		;// assert(true, "Json is discrarded");
 	std::cout << j.dump();
 	std::cout << std::endl << std::endl << std::endl;
 	return ReadFirstArray(j);

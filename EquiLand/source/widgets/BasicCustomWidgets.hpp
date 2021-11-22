@@ -53,6 +53,7 @@ namespace widgets {
 
 	bool Splitter(const char* str_id, bool split_vertically, float thickness, float* size1, float* size2, float min_size1, float min_size2, float splitter_long_axis_size = -1.0f)
 	{
+		static bool started_action = false;
 		using namespace ImGui;
 		ImGuiContext& g = *GImGui;
 		ImGuiWindow* window = g.CurrentWindow;
@@ -60,8 +61,12 @@ namespace widgets {
 		ImRect bb;
 		bb.Min = window->DC.CursorPos + (split_vertically ? ImVec2(*size1, 0.0f) : ImVec2(0.0f, *size1));
 		bb.Max = bb.Min + CalcItemSize(split_vertically ? ImVec2(thickness, splitter_long_axis_size) : ImVec2(splitter_long_axis_size, thickness), 0.0f, 0.0f);
-		if (!ImGui::IsMouseHoveringRect(bb.Min, bb.Max))
+		if (ImGui::IsMouseHoveringRect(bb.Min, bb.Max) && ImGui::IsMouseClicked(0))
+			started_action = true;
+		if (!ImGui::IsMouseHoveringRect(bb.Min, bb.Max) && !started_action)
 			bb = {};
+		if (started_action && !ImGui::IsMouseDown(0))
+			started_action = false;
 		return SplitterBehavior(bb, id, split_vertically ? ImGuiAxis_X : ImGuiAxis_Y, size1, size2, min_size1, min_size2, 0.0f);
 	}
 

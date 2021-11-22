@@ -23,7 +23,7 @@ list(APPEND EquiLand_Sources "source/structures.hpp" "source/gui.hpp" "source/Fr
 list(APPEND EquiLand_Sources "source/AppSettings.hpp"  "source/Application.h" "source/Application.cpp")
 list(APPEND EquiLand_Sources "source/Styles.hpp" "source/Fonts.hpp" "source/Notifications.hpp")
 list(APPEND EquiLand_Sources "source/utils/ColorHelpers.hpp" "source/ApplicationMenu.hpp")
-list(APPEND EquiLand_Sources "source/utils/MathUtils.hpp")
+list(APPEND EquiLand_Sources "source/utils/MathUtils.hpp" "source/Keyboard.hpp")
 
 set(		EquiLand_Widgets_Sources "source/widgets/BasicCustomWidgets.hpp"	"source/widgets/AnimatedCustomWidgets.hpp")
 list(APPEND EquiLand_Widgets_Sources "source/widgets/RangeSelect.hpp"			"source/widgets/IncludeAllWidgets.hpp")
