@@ -31,7 +31,7 @@ list(APPEND EquiLand_Widgets_Sources "source/widgets/CardSelection.hpp"			"sourc
 list(APPEND EquiLand_Widgets_Sources "source/widgets/BoardSelect.hpp"			"source/widgets/DeadCardsSelect.hpp")
 
 set(		EquiLand_Fonts_Sources "fonts/DefinesFontAwesome.hpp" "fonts/BinaryFontAwesome.hpp")
-list(APPEND EquiLand_Fonts_Sources "fonts/BinaryFontRoboto.hpp")
+list(APPEND EquiLand_Fonts_Sources "fonts/BinaryFontRoboto.hpp" "fonts/BinaryFontCards.hpp")
 
 set(		EquiLand_Project_Sources ${ImGui_Docking_Sources} ${EquiLand_Sources} ${OMPEval_Sources})
 list(APPEND EquiLand_Project_Sources ${EquiLand_Fonts_Sources} ${EquiLand_Widgets_Sources})

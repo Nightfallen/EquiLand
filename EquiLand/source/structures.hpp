@@ -1,6 +1,13 @@
 #ifndef SOURCE_STRUCTURES_HPP
 #define SOURCE_STRUCTURES_HPP
 
+enum class FONT {
+	DEFAULT,	// Latin, Cyrillic and Icons Glyph ranges
+	ONLY_ICONS,
+	CARDS,
+
+};
+
 typedef void (*ProcUIHandler)();
 
 struct RangeNode {

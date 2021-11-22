@@ -1,16 +1,13 @@
+#ifndef SOURCE_FONTS_HPP
+#define SOURCE_FONTS_HPP
+
 #include <includes_pch.h>
+#include <source/structures.hpp>
 
 // All fonts are included in 'includes_pch.h'
 //#include "fonts/BinaryFontAwesome.hpp"
 //#include "fonts/BinaryFontRoboto.hpp"
 //#include "fonts/DefinesFontAwesome.hpp"
-
-enum class FONT {
-	DEFAULT,	// Latin, Cyrillic and Icons Glyph ranges
-	ONLY_ICONS,
-
-	
-};
 
 void BuildDefaultFont(ImGuiIO& io)
 {
@@ -40,4 +37,9 @@ void BuildDefaultFont(ImGuiIO& io)
 
 	font1 = io.Fonts->AddFontFromMemoryCompressedTTF(binIconsFont_compressed_data, binIconsFont_compressed_size, 18.f, &font_config, ranges);
 	io.Fonts->Build();
+
+	font1 = io.Fonts->AddFontFromMemoryCompressedTTF(cards_font_compressed_data, cards_font_compressed_size, 21.f, &font_config, ranges);
+	io.Fonts->Build();
 }
+
+#endif // !SOURCE_FONTS_HPP

@@ -117,5 +117,6 @@
 #include <fonts/BinaryFontAwesome.hpp>
 #include <fonts/BinaryFontRoboto.hpp>
 #include <fonts/DefinesFontAwesome.hpp>
+#include <fonts/BinaryFontCards.hpp>
 
 #endif // !INCLUDES_PCH_H
