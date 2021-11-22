@@ -4,6 +4,7 @@
 // C++ headers
 #include <algorithm>
 #include <array>
+#include <bitset>
 #include <charconv>
 #include <chrono>
 #include <compare>
@@ -43,6 +44,7 @@
 // Vcpkg headers
 #include <ft2build.h>
 #include <libdivide.h>
+#include <nlohmann/json.hpp>
 
 // Debug options
 #if defined(_DEBUG)

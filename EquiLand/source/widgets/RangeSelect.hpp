@@ -3,19 +3,19 @@
 
 #include <includes_pch.h>
 #include <source/widgets/BasicCustomWidgets.hpp>
+#include <source/utils/MathUtils.hpp>
 
 namespace widgets::EquiLand {
 
 	struct CardMatrix {
-		bool cards[169] = {};
+		std::bitset<169> cards = 0b0;
 		std::string range;
 		auto operator<=>(const CardMatrix&) const = default;
 	};
 
 	// Helper function for 'RangeSelect' widget
 	// #TODO: make another algorithm
-	template<typename T, std::size_t N>
-	std::string BuildRangeString(const T(&arr)[N])
+	std::string BuildRangeString(std::bitset<169> arr)
 	{
 		std::string result;
 		result.reserve(256);
@@ -24,7 +24,8 @@ namespace widgets::EquiLand {
 		{6, '8'}, {7, '7'},   {8, '6'}, {9, '5'}, {10, '4'},  {11, '3'}, {12, '2'}
 		};
 
-		bool isRandom = std::all_of(arr, arr + N, [](bool x) { return x == true; });
+		int N = 169;
+		bool isRandom = arr.all();  //std::all_of(arr, arr + N, [](bool x) { return x == true; });
 		if (isRandom)
 			return "random";
 
@@ -57,7 +58,7 @@ namespace widgets::EquiLand {
 			// columns
 			for (int y = 0; y < nMax; ++y)
 			{
-				auto selected = arr[13 * y + x];
+				bool selected = arr[13 * y + x];
 				if (selected && x < y)
 				{
 					int cur_os = 13 * x + y;
@@ -122,7 +123,7 @@ namespace widgets::EquiLand {
 
 			for (int x = 0; x < nMax; ++x)
 			{
-				auto selected = arr[13 * y + x];
+				bool selected = arr[13 * y + x];
 				if (selected && x > y)
 				{
 					int cur_ss = 13 * y + x;
@@ -291,21 +292,7 @@ namespace widgets::EquiLand {
 		return result;
 	}
 
-	constexpr size_t nChoosek(size_t n, size_t k)
-	{
-		if (k > n) return 0;
-		if (k * 2 > n) k = n - k;
-		if (k == 0) return 1;
-
-		int result = n;
-		for (int i = 2; i <= k; ++i) {
-			result *= (n - i + 1);
-			result /= i;
-		}
-		return result;
-	}
-
-	void RangeSelect(CardMatrix& matrix)
+	void RangeSelect(CardMatrix& matrix, bool changed_rane_node)
 	{
 		auto& style = ImGui::GetStyle();
 		auto& io = ImGui::GetIO();
@@ -314,7 +301,7 @@ namespace widgets::EquiLand {
 			{6, '8'}, {7, '7'},   {8, '6'}, {9, '5'}, {10, '4'},  {11, '3'}, {12, '2'}
 		};
 
-		constexpr auto total_combos = nChoosek(52, 2);
+		constexpr auto total_combos = MathUtils::nChoosek(52, 2);
 		size_t current_combos = 0;
 		auto& selected = matrix.cards;
 		//static bool selected[13 * 13] = {};
@@ -380,8 +367,10 @@ namespace widgets::EquiLand {
 				str = std::format("{}{}{}", first, second, postfix);
 				auto flags = ImGuiSelectableFlags_SelectOnClick;
 				auto prevCurPos = ImGui::GetCursorScreenPos();
-				if (widgets::CustomSelectable(str.data(), &selected[13 * x + y], bg_color, flags, ImVec2(40, 40)))
+				bool current_bool = matrix.cards[13 * x + y];
+				if (widgets::CustomSelectable(str.data(), &current_bool, bg_color, flags, ImVec2(40, 40)))
 				{
+					matrix.cards[13 * x + y] = current_bool;
 					bool isShiftPressed = io.KeyShift;
 					// Imgui's 'IsKeyPressed' doesn't work properly somewhy
 					// For windows i can use 'GetAsyncKeyState'
@@ -392,11 +381,18 @@ namespace widgets::EquiLand {
 						//for (int k = x + 1; k < 13; ++k)
 						for (int k = x - 1; k >= 0; --k)
 						{
-							auto& cur_val = selected[13 * k + k];
+							int cur_val = selected[13 * k + k];
+							//auto& cur_val = selected[13 * k + k];
 							if (cur_state && cur_val)
+							{
 								cur_val ^= 1;
+								selected[13 * k + k] = cur_val;
+							}
 							else if (!cur_state && !cur_val)
+							{
 								cur_val ^= 1;
+								selected[13 * k + k] = cur_val;
+							}
 						}
 					}
 					if (isShiftPressed && x > y) // off-suited
@@ -405,11 +401,18 @@ namespace widgets::EquiLand {
 						{
 							if (y >= k) continue;
 
-							auto& cur_val = selected[13 * k + y];
+							int cur_val = selected[13 * k + y];
+							//auto& cur_val = selected[13 * k + y];
 							if (cur_state && cur_val)
+							{
 								cur_val ^= 1;
+								selected[13 * k + y] = cur_val;
+							}
 							else if (!cur_state && !cur_val)
+							{
 								cur_val ^= 1;
+								selected[13 * k + y] = cur_val;
+							}
 						}
 
 					}
@@ -418,11 +421,18 @@ namespace widgets::EquiLand {
 						for (int k = y - 1; k >= 0; --k)
 						{
 							if (x >= k) continue;
-							auto& cur_val = selected[13 * x + k];
+							int cur_val = selected[13 * x + k];
+							//auto& cur_val = selected[13 * x + k];
 							if (cur_state && cur_val)
+							{
 								cur_val ^= 1;
+								selected[13 * x + k] = cur_val;
+							}
 							else if (!cur_state && !cur_val)
+							{
 								cur_val ^= 1;
+								selected[13 * x + k] = cur_val;
+							}
 						}
 					}
 
@@ -478,7 +488,7 @@ namespace widgets::EquiLand {
 		}
 
 		static std::string str_range = "Empty range";
-		if (started_action && !io.MouseDown[0])
+		if ((started_action && !io.MouseDown[0]) || changed_rane_node)
 		{
 			started_action = false;
 
@@ -492,7 +502,8 @@ namespace widgets::EquiLand {
 
 		if (ImGui::Button("Clear all"))
 		{
-			std::fill(selected, selected + 169, 0);
+			//std::fill(selected, selected + 169, 0);
+			selected = 0;
 			str_range = "Empty Range";
 		}
 		ImGui::SameLine();
@@ -509,7 +520,6 @@ namespace widgets::EquiLand {
 			ImGui::EndPopup();
 		}
 	}
-
 }
 
 #endif // !SOURCE_WIDGETS_RANGESELECT_HPP

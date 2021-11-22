@@ -4,17 +4,10 @@
 #include <includes_pch.h>
 #include <source/widgets/BasicCustomWidgets.hpp>
 #include <fonts/DefinesFontAwesome.hpp>
+#include <source/structures.hpp>
+#include <source/AppSettings.hpp>
 
 namespace widgets::EquiLand {
-
-	struct RangeNode {
-		bool isHeader;
-		std::string name;
-		bool state_context_menu;
-		bool state_rename;
-		std::vector<std::unique_ptr<RangeNode>>* childs;
-	};
-
 	enum NodeContextMenuFlags {
 		NodeContextMenuFlags_None = 0,
 		NodeContextMenuFlags_NoAppendCategory = 1 << 0,
@@ -64,7 +57,8 @@ namespace widgets::EquiLand {
 				.name = "Empty Sub Node Header###",
 				.state_context_menu = false,
 				.state_rename = false,
-				.childs = nullptr
+				.childs = nullptr,
+				.selectables = 0b0
 				});
 			node->childs->push_back(std::move(new_category));
 			result = NodeContextMenuResult_AddCategory;
@@ -80,7 +74,8 @@ namespace widgets::EquiLand {
 				.name = "Blank range###",
 				.state_context_menu = false,
 				.state_rename = false,
-				.childs = nullptr
+				.childs = nullptr,
+				.selectables = 0b0
 				});
 			node->childs->push_back(std::move(new_range));
 			result = NodeContextMenuResult_AddRange;
@@ -195,7 +190,12 @@ namespace widgets::EquiLand {
 		ImGui::PopStyleVar();
 	}
 
-	std::string RealRecursiveTreeRange(std::vector<std::unique_ptr<RangeNode>>* nodes, std::string selMask, std::string& real_selected, int rec_level = 1, int id_start = 0)
+	struct TreeRangeRes {
+		std::string name;
+		std::bitset<169>* range;
+	};
+
+	TreeRangeRes RealRecursiveTreeRange(std::vector<std::unique_ptr<RangeNode>>* nodes, std::string selMask, std::string& real_selected, int rec_level = 1, int id_start = 0)
 	{
 		auto& io = ImGui::GetIO();
 		auto& style = ImGui::GetStyle();
@@ -205,6 +205,8 @@ namespace widgets::EquiLand {
 		RangeNode* to_delete_category = nullptr;
 		RangeNode* to_delete_range = nullptr;
 		bool selected_node = false;
+		TreeRangeRes return_result = {};
+		std::bitset<169>* range_result = nullptr;
 
 		auto selected_mask = selMask;
 		for (int i = 0; auto && node : *nodes)
@@ -245,11 +247,13 @@ namespace widgets::EquiLand {
 			{
 				if (node->childs)
 				{
-					auto result = RealRecursiveTreeRange(node->childs, selected_mask, real_selected, rec_level + 1, (i + 1) * 250);
-					if (!result.empty() && result[result.size() - 1] == ';')
+					auto func_temp_result = RealRecursiveTreeRange(node->childs, selected_mask, real_selected, rec_level + 1, (i + 1) * 250);
+					auto& str_tmp_res = func_temp_result.name;
+					if (!str_tmp_res.empty() && str_tmp_res[str_tmp_res.size() - 1] == ';')
 					{
 						selected_node = true;
-						selected_mask = result;
+						selected_mask = str_tmp_res;
+						range_result = func_temp_result.range;
 					}
 
 					// Maybe additional push id is needed
@@ -279,6 +283,7 @@ namespace widgets::EquiLand {
 						{
 							selected_node = true;
 							selected_mask.append(">").append(std::to_string(j)).append(";");
+							range_result = &child_node->selectables;
 						}
 
 						if (ImGui::BeginPopupContextItem())
@@ -334,26 +339,39 @@ namespace widgets::EquiLand {
 		}
 
 		if (selected_node)
-			return selected_mask;
-		return "";
+			return { selected_mask, range_result };
+		return { "", range_result };
 
 	}
 
-	void RecursiveTreeRange(std::vector<std::unique_ptr<RangeNode>>* nodes)
+	std::bitset<169>* RecursiveTreeRange(std::vector<std::unique_ptr<RangeNode>>* nodes)
 	{
 		static std::string real_selected;
 		std::string sel_mask;
-		auto result = RealRecursiveTreeRange(nodes, sel_mask, real_selected, 1, 0);
+		auto result_full = RealRecursiveTreeRange(nodes, sel_mask, real_selected, 1, 0);
+		auto& result = result_full.name;
 		if (!result.empty() && result[result.size() - 1] == ';')
 			real_selected = result;
+		return result_full.range;
 	}
 
-	void TreeRangeEditor()
+	std::bitset<169>* TreeRangeEditor()
 	{
 		auto& io = ImGui::GetIO();
 		auto& style = ImGui::GetStyle();
+		
+		static bool only_once = true;
+		auto custom_deleter = [](std::vector<std::unique_ptr<RangeNode>>* nodes) { delete nodes; };
+		static std::unique_ptr<std::vector<std::unique_ptr<RangeNode>>> nodes(ReadRanges("ranges.txt"));
 
-		static std::vector<std::unique_ptr<RangeNode>> nodes;
+
+
+		if (only_once)
+		{
+			auto nodes_from_file = ReadRanges("ranges.txt");
+			//nodes = std::move(std::make_unique<std::vector<std::unique_ptr<RangeNode>>>(nodes_from_file));
+			only_once = false;
+		}
 
 		// Buttons to add/delete headers
 		const char* edit_buttons[] = { ICON_FA_PLUS_CIRCLE, ICON_FA_FILE, ICON_FA_LIST };
@@ -371,131 +389,26 @@ namespace widgets::EquiLand {
 					.name = name_node,
 					.state_context_menu = false,
 					.state_rename = false,
-					.childs = nullptr
+					.childs = nullptr,
+					.selectables = 0b0
 					});
-				nodes.push_back(std::move(node));
+				nodes->push_back(std::move(node));
 			}
 			separator = true;
 		}
-
-		RecursiveTreeRange(&nodes);
-
-		ImGuiTreeNodeFlags base_flags = ImGuiTreeNodeFlags_SpanFullWidth;
-		if (ImGui::CollapsingHeader("Default Ranges", ImGuiTreeNodeFlags_None))
+		ImGui::SameLine();
+		if (ImGui::Button("Save ranges"))
 		{
-			int node_clicked = -1;
-			const char* leafs[] = { "OR UTG-1", "OR CO", "OR BU" };
-			static int selection_mask = (1 << 0);
-
-			for (int i = 0; i < 3; ++i)
-			{
-				ImGuiTreeNodeFlags node_flags = base_flags;
-				const bool is_selected = (selection_mask & (1 << i)) != 0;
-				if (is_selected)
-					node_flags |= ImGuiTreeNodeFlags_Selected;
-				node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
-
-				ImGui::TreeNodeEx((void*)(intptr_t)i, node_flags, leafs[i], i);
-				if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
-					node_clicked = i;
-			}
-
-			if (node_clicked != -1)
-			{
-				// Update selection state
-				// (process outside of tree loop to avoid visual inconsistencies during the clicking frame)
-				if (ImGui::GetIO().KeyCtrl)
-					selection_mask ^= (1 << node_clicked);          // CTRL+click to toggle
-				else if (!(selection_mask & (1 << node_clicked))) // Depending on selection behavior you want, may want to preserve selection when clicking on item that is part of the selection
-					selection_mask = (1 << node_clicked);           // Click to single-select
-			}
-
+			SaveRanges("ranges.txt", nodes.get());
 		}
-		if (ImGui::CollapsingHeader("NL2-NL10 Ranges", ImGuiTreeNodeFlags_None))
-		{
-			constexpr auto nFilters = 6;
-			const char* filters[nFilters] = { "Open-Raise", "Call OR", "3-Bet", "Call 3-Bet", "4-Bet", "5-Bet - Push" };
+		// Auto saving on application exit
+		// This works due fade-out animation on app exit
+		// #FIXME Temp hack
+		if (style.Alpha <= 0.2f)
+			SaveRanges("ranges.txt", nodes.get());
 
-			for (int i = 0; i < nFilters; ++i)
-			{
-				auto curPos = ImGui::GetCursorScreenPos();
-				curPos.x += 20.f;
-				ImGui::SetCursorScreenPos(curPos);
-				if (ImGui::CollapsingHeader(filters[i], ImGuiTreeNodeFlags_None))
-				{
-					int node_clicked = -1;
-					const char* leafs[] = { "OR UTG-1", "OR CO", "OR BU", "OR UTG-1", "OR CO", "OR BU", "OR UTG-1", "OR CO", "OR BU" };
-					size_t szLeafs = IM_ARRAYSIZE(leafs);
-					static int selection_mask = (1 << 0);
-
-					for (int i = 0; i < szLeafs; ++i)
-					{
-						ImGuiTreeNodeFlags node_flags = base_flags;
-						const bool is_selected = (selection_mask & (1 << i)) != 0;
-						if (is_selected)
-							node_flags |= ImGuiTreeNodeFlags_Selected;
-						node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
-
-
-
-						ImGui::TreeNodeEx((void*)(intptr_t)i, node_flags, leafs[i], i);
-						if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
-							node_clicked = i;
-					}
-
-					if (node_clicked != -1)
-					{
-						// Update selection state
-						// (process outside of tree loop to avoid visual inconsistencies during the clicking frame)
-						if (ImGui::GetIO().KeyCtrl)
-							selection_mask ^= (1 << node_clicked);          // CTRL+click to toggle
-						else if (!(selection_mask & (1 << node_clicked))) // Depending on selection behavior you want, may want to preserve selection when clicking on item that is part of the selection
-							selection_mask = (1 << node_clicked);           // Click to single-select
-					}
-				}
-			}
-		}
-		if (ImGui::CollapsingHeader("NL10-NL25 Ranges", ImGuiTreeNodeFlags_None))
-		{
-			constexpr auto nSzArr = 3;
-			static bool selection[nSzArr] = { false, false, false };
-			const char* leafs[nSzArr] = { "UTG-1 3-Bet", "BB 3-Bet", "SB 3-Bet" };
-
-			for (int n = 0; n < nSzArr; n++)
-			{
-				if (ImGui::Selectable(leafs[n], selection[n]))
-				{
-					//if (!ImGui::GetIO().KeyCtrl)    // Clear selection when CTRL is not held
-					memset(selection, 0, sizeof(selection));
-					selection[n] ^= 1;
-				}
-			}
-		}
-		if (ImGui::CollapsingHeader("NL25-100 Ranges", ImGuiTreeNodeFlags_None))
-		{
-			ImGui::Text("IsItemHovered: %d", ImGui::IsItemHovered());
-			for (int i = 0; i < 5; i++)
-				ImGui::Text("Some content %d", i);
-		}
-		if (ImGui::CollapsingHeader("MTT Ranges (ABI 1)", ImGuiTreeNodeFlags_None))
-		{
-			ImGui::Text("IsItemHovered: %d", ImGui::IsItemHovered());
-			for (int i = 0; i < 5; i++)
-				ImGui::Text("Some content %d", i);
-		}
-		if (ImGui::CollapsingHeader("MTT Ranges (ABI 10)", ImGuiTreeNodeFlags_None))
-		{
-			ImGui::Text("IsItemHovered: %d", ImGui::IsItemHovered());
-			for (int i = 0; i < 5; i++)
-				ImGui::Text("Some content %d", i);
-		}
-		if (ImGui::CollapsingHeader("MTT Ranges (ABI 50)", ImGuiTreeNodeFlags_None))
-		{
-			ImGui::Text("IsItemHovered: %d", ImGui::IsItemHovered());
-			for (int i = 0; i < 5; i++)
-				ImGui::Text("Some content %d", i);
-		}
-
+		auto range_res =  RecursiveTreeRange(nodes.get());
+		return range_res;
 	}
 }
 

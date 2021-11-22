@@ -6,6 +6,7 @@
 #include <fonts/DefinesFontAwesome.hpp>
 #include <source/Notifications.hpp>
 #include <source/ApplicationMenu.hpp>
+#include <source/AppSettings.hpp>
 
 void CustomWindow(bool* is_open)
 {
@@ -38,11 +39,20 @@ void CustomWindow(bool* is_open)
 	float child_w4 = spl4;
 
 	widgets::Splitter("##Splitter1", true, 8.0f, &spl1, &spl2, 8, 8, h);
-
+	static std::bitset<169>* range_ptr = nullptr;
+	std::bitset<169>* temp_range_ptr;
+	bool changed_range_node = false;
 	if (ImGui::BeginChild("child1", ImVec2(child_w1, h), true))
 	{
-		widgets::EquiLand::TreeRangeEditor();
-		
+		temp_range_ptr = widgets::EquiLand::TreeRangeEditor();
+		if (temp_range_ptr != nullptr)
+		{
+			if (temp_range_ptr != range_ptr)
+			{
+				range_ptr = temp_range_ptr;
+				changed_range_node = true;
+			}
+		}
 	}
 	ImGui::EndChild();
 
@@ -51,7 +61,15 @@ void CustomWindow(bool* is_open)
 	ImGui::SameLine();
 	if (ImGui::BeginChild("child2", ImVec2(child_w2, h), true))
 	{
-		widgets::EquiLand::RangeSelect(range_matrix);
+		//widgets::EquiLand::RangeSelect(range_matrix);
+		if (range_ptr != nullptr)
+			range_matrix.cards = *range_ptr;
+
+		widgets::EquiLand::RangeSelect(range_matrix, changed_range_node);
+
+		if (range_ptr != nullptr)
+			for (int i = 0; i < 169; ++i)
+				range_ptr->set(i, range_matrix.cards[i]);
 	}
 	ImGui::EndChild();
 
@@ -86,6 +104,7 @@ void UI_HANDLER()
 {
 	// Our state
 	static NotificationSystem notifySystem;
+
 
 	static bool just_once = true;
 	if (just_once)
