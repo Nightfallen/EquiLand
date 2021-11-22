@@ -71,7 +71,7 @@ namespace widgets::EquiLand {
 
 			auto new_range = std::make_unique<RangeNode>(RangeNode{
 				.isHeader = false,
-				.name = "Blank range###",
+				.name = "Blank range",
 				.state_context_menu = false,
 				.state_rename = false,
 				.childs = nullptr,
@@ -169,7 +169,7 @@ namespace widgets::EquiLand {
 		char buf[256]{};
 
 		if (!ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))
-			std::copy(node->name.begin(), node->name.end() - 3, buf);
+			std::copy(node->name.begin(), node->name.end(), buf);
 
 		ImGui::SetNextItemWidth(maxItem.x - minItem.x);
 		if (ImGui::InputText("##Rename current Node", buf, 256))
@@ -177,7 +177,6 @@ namespace widgets::EquiLand {
 			if (ImGui::IsItemDeactivated())
 			{
 				node->name = buf;
-				//node->name.append("###");
 				node->state_rename = false;
 			}
 		}
@@ -265,6 +264,10 @@ namespace widgets::EquiLand {
 						ImGui::PushID(id);
 						bool selected = true;
 						int node_flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+						
+						if (child_node->state_rename)
+							node_flags |= ImGuiTreeNodeFlags_AllowItemOverlap;
+
 						label = child_node->name.data();
 						if (child_node->state_rename)
 							label = ""; // = "###"
@@ -276,6 +279,9 @@ namespace widgets::EquiLand {
 						}
 
 						ImGui::TreeNodeEx((void*)(intptr_t)(id), node_flags, label.data());
+
+						if (child_node->state_rename)
+							StateRenameChildHelper(child_node.get());
 
 						//std::string selected_item = std::format("{}>{}");
 
@@ -294,8 +300,7 @@ namespace widgets::EquiLand {
 								to_delete_range = child_node.get();
 						}
 
-						if (child_node->state_rename)
-							StateRenameChildHelper(child_node.get());
+						
 
 						ImGui::PopID();
 					}
