@@ -157,7 +157,7 @@ void Application::InitializeImgui()
 		style.Colors[ImGuiCol_WindowBg].w = 1.0f;
 	}
 	io.ConfigWindowsMoveFromTitleBarOnly = true;
-
+	
 	// Application handles windows sizing on its own
 	ImGui::GetIO().IniFilename = NULL;
 

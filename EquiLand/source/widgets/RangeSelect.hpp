@@ -519,6 +519,42 @@ namespace widgets::EquiLand {
 			}
 			ImGui::EndPopup();
 		}
+		
+		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvailWidth());
+		static float slider_percents = 0.f;
+		float prev_value = slider_percents;
+		bool changed_value = ImGui::SliderFloat("##Slider_Range_Percent", &slider_percents, 0.f, 100.f);
+
+		if (changed_value)
+		{
+			auto diff = slider_percents - prev_value;
+
+			float counter_percents = 0.f;
+			selected.reset();
+			for (int x = 0; x < 13; ++x)
+			{
+				for (int y = 0; y < 13; ++y)
+				{
+					if (counter_percents >= slider_percents) continue;
+					bool cur_state = selected[13 * x + y];
+					if (x > y)	// offsuit
+					{
+						counter_percents += 0.9f;
+					}
+					else if (x != y) // suit
+					{
+						counter_percents += 0.3f;
+					}
+					else if (x == y) // pairs
+					{
+						counter_percents += 0.45f;
+					}
+					selected[13 * x + y] = true;
+				}
+			}
+			slider_percents = counter_percents;
+		}
+		
 	}
 }
 
