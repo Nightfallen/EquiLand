@@ -115,6 +115,7 @@
 
 // Project files that aren't changed frequently or at all
 #include <fonts/BinaryFontAwesome.hpp>
+#include <fonts/BinaryFontAwesomeBrands.hpp>
 #include <fonts/BinaryFontRoboto.hpp>
 #include <fonts/DefinesFontAwesome.hpp>
 #include <fonts/BinaryFontCards.hpp>

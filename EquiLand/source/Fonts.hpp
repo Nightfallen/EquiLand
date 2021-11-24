@@ -11,8 +11,9 @@
 
 void BuildDefaultFont(ImGuiIO& io)
 {
-	static const ImWchar icons_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };	// Will not be copied by AddFont* so keep in scope.
-	static const ImWchar ranges[] =											// Will not be copied by AddFont* so keep in scope.
+	static const ImWchar icons_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };			// Will not be copied by AddFont* so keep in scope.
+	static const ImWchar icons_brands_ranges[] = { ICON_MIN_FAB, ICON_MAX_FAB, 0 };	// Will not be copied by AddFont* so keep in scope.
+	static const ImWchar ranges[] =													// Will not be copied by AddFont* so keep in scope.
 	{
 		0x0020, 0x00FF,	// Latin ranges
 		0x0400, 0x044F,	// Cyrillic ranges
@@ -20,11 +21,13 @@ void BuildDefaultFont(ImGuiIO& io)
 	};
 	static ImFontConfig font_config{};
 	static ImFontConfig icons_config{};
+	static ImFontConfig icons_only_cfg{};
 	font_config.PixelSnapH = true;
 	font_config.OversampleH = 2;
 	font_config.OversampleV = 1;
 	icons_config = font_config;
 	icons_config.MergeMode = true;	// Merging icons into the first font
+	icons_only_cfg = icons_config;
 
 	// Made to group up up to three fonts
 	ImFont* font1 = nullptr;
@@ -32,10 +35,12 @@ void BuildDefaultFont(ImGuiIO& io)
 	ImFont* font3 = nullptr;
 
 	font1 = io.Fonts->AddFontFromMemoryCompressedTTF(binRobotoFont_compressed_data, binRobotoFont_compressed_size, 18.f, &font_config, ranges);
-	font2 = io.Fonts->AddFontFromMemoryCompressedTTF(binIconsFont_compressed_data, binIconsFont_compressed_size, 15.f, &icons_config, icons_ranges);
+	font2 = io.Fonts->AddFontFromMemoryCompressedTTF(FontAwesome_compressed_data, FontAwesome_compressed_size, 15.f, &icons_config, icons_ranges);
+	font3 = io.Fonts->AddFontFromMemoryCompressedTTF(FontAwesomeBrands_compressed_data, FontAwesomeBrands_compressed_size, 15.f, &icons_config, icons_brands_ranges);
 	io.Fonts->Build();
 
-	font1 = io.Fonts->AddFontFromMemoryCompressedTTF(binIconsFont_compressed_data, binIconsFont_compressed_size, 18.f, &font_config, ranges);
+	font1 = io.Fonts->AddFontFromMemoryCompressedTTF(FontAwesome_compressed_data, FontAwesome_compressed_size, 18.f, &font_config, icons_ranges);
+	font2 = io.Fonts->AddFontFromMemoryCompressedTTF(FontAwesomeBrands_compressed_data, FontAwesomeBrands_compressed_size, 18.f, &icons_only_cfg, icons_brands_ranges);
 	io.Fonts->Build();
 
 	font1 = io.Fonts->AddFontFromMemoryCompressedTTF(cards_font_compressed_data, cards_font_compressed_size, 21.f, &font_config, ranges);

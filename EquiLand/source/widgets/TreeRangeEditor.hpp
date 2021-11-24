@@ -80,12 +80,12 @@ namespace widgets::EquiLand {
 			node->childs->push_back(std::move(new_range));
 			result = NodeContextMenuResult_AddRange;
 		}
-		if (!no_rename && ImGui::MenuItemEx("Rename", ICON_FA_PENCIL))
+		if (!no_rename && ImGui::MenuItemEx("Rename", ICON_FA_PENCIL_ALT))
 		{
 			node->state_rename = true;
 			result = NodeContextMenuResult_Rename;
 		}
-		if (!no_delete && ImGui::MenuItemEx("Delete", ICON_FA_TRASH_O))
+		if (!no_delete && ImGui::MenuItemEx("Delete", ICON_FA_TRASH))
 		{
 			result = NodeContextMenuResult_Delete;
 		}
@@ -100,12 +100,12 @@ namespace widgets::EquiLand {
 		bool no_delete = flags & NodeContextMenuFlags_NoDelete;
 		int result = 0;
 
-		if (!no_rename && ImGui::MenuItemEx("Rename", ICON_FA_PENCIL))
+		if (!no_rename && ImGui::MenuItemEx("Rename", ICON_FA_PENCIL_ALT))
 		{
 			node->state_rename = true;
 			result = NodeContextMenuResult_Rename;
 		}
-		if (!no_delete && ImGui::MenuItemEx("Delete", ICON_FA_TRASH_O))
+		if (!no_delete && ImGui::MenuItemEx("Delete", ICON_FA_TRASH))
 		{
 			result = NodeContextMenuResult_Delete;
 		}
@@ -369,43 +369,61 @@ namespace widgets::EquiLand {
 		auto custom_deleter = [](std::vector<std::unique_ptr<RangeNode>>* nodes) { delete nodes; };
 		static std::unique_ptr<std::vector<std::unique_ptr<RangeNode>>> nodes(ReadRanges("ranges.txt"));
 
-
-
-		if (only_once)
-		{
-			auto nodes_from_file = ReadRanges("ranges.txt");
-			//nodes = std::move(std::make_unique<std::vector<std::unique_ptr<RangeNode>>>(nodes_from_file));
-			only_once = false;
-		}
-
 		// Buttons to add/delete headers
-		const char* edit_buttons[] = { ICON_FA_PLUS_CIRCLE, ICON_FA_FILE, ICON_FA_LIST };
+		enum BTN_TREE_NODE {
+			ADD_CATEGORY,
+			SAVE_LOCAL,
+			SAVE_EXPORT,
+		};
+		
+		const char* edit_buttons[] = { ICON_FA_PLUS_CIRCLE, ICON_FA_SAVE, ICON_FA_FILE_EXPORT };
+		const char* edit_buttons_tooltips[] = { "Add range", "Save Changes", "Export changes" };
 		size_t sz_Arr = IM_ARRAYSIZE(edit_buttons);
 
 		bool separator = false;
 		for (int i = 0; i < sz_Arr; ++i)
 		{
 			if (separator) ImGui::SameLine();
-			if (ImGui::Button(edit_buttons[i]))
+			bool pressed = ImGui::Button(edit_buttons[i]);
+			if (ImGui::IsItemHovered())
 			{
-				std::string name_node = "Empty Node Header###";
-				auto node = std::make_unique<RangeNode>(RangeNode{
-					.isHeader = true,
-					.name = name_node,
-					.state_context_menu = false,
-					.state_rename = false,
-					.childs = nullptr,
-					.selectables = 0b0
-					});
-				nodes->push_back(std::move(node));
+				ImGui::BeginTooltip();
+				ImGui::Text(edit_buttons_tooltips[i]);
+				ImGui::EndTooltip();
 			}
 			separator = true;
+
+			if (pressed)
+			{
+				switch (i)
+				{
+				case BTN_TREE_NODE::ADD_CATEGORY:
+				{
+					auto lambdaAddCategory = [](auto& nodes) {
+						std::string name_node = "Empty Node Header###";
+						auto node = std::make_unique<RangeNode>(RangeNode{
+							.isHeader = true,
+							.name = name_node,
+							.state_context_menu = false,
+							.state_rename = false,
+							.childs = nullptr,
+							.selectables = 0b0
+							});
+						nodes->push_back(std::move(node));
+					};
+					lambdaAddCategory(nodes);
+				}
+				break;
+				case BTN_TREE_NODE::SAVE_LOCAL:
+					SaveRanges("ranges.txt", nodes.get());
+					break;
+				case BTN_TREE_NODE::SAVE_EXPORT:
+					break;
+				default: break;
+				}
+			}
 		}
-		ImGui::SameLine();
-		if (ImGui::Button("Save ranges"))
-		{
-			SaveRanges("ranges.txt", nodes.get());
-		}
+
 		// Auto saving on application exit
 		// This works due fade-out animation on app exit
 		// #FIXME Temp hack

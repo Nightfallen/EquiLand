@@ -162,10 +162,10 @@ void Application::InitializeImgui()
 	ImGui::GetIO().IniFilename = NULL;
 
 	// Setup Platform/Renderer backends
+	freetypeTest = {};
+	BuildDefaultFont(io);
 	ImGui_ImplWin32_Init(hwnd_);
 	ImGui_ImplDX11_Init(g_pd3dDevice, g_pd3dDeviceContext);
-	BuildDefaultFont(io);
-	freetypeTest = {};
 }
 
 Application::Application()

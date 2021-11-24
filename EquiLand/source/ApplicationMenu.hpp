@@ -115,7 +115,7 @@ void CreateMainMenuBar()
 	static bool popup = false;
 	static bool popup_settings = false;
 	static void(*ShowPopup)() = []() {};
-
+	
 	// Now Imgui's menu bar doesn't support shortcuts
 	// So using temp workaround
 	// Soon single (lambda) function can be used for both if clauses (menuitem and shortcut)
