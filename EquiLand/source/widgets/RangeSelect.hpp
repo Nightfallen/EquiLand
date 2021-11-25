@@ -523,38 +523,64 @@ namespace widgets::EquiLand {
 		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvailWidth());
 		static float slider_percents = 0.f;
 		float prev_value = slider_percents;
-		bool changed_value = ImGui::SliderFloat("##Slider_Range_Percent", &slider_percents, 0.f, 100.f);
+		bool changed_value = ImGui::SliderFloat("##Slider_Range_Percent", &slider_percents, 0.f, 100.f, "%.2f");
+		if (ImGui::IsItemDeactivatedAfterEdit())
+			str_range = BuildRangeString(selected);
+		
+		// #TODO move this array to file with constants
+		static int arr_equity[169] = 
+		{85, 68, 67, 66, 66, 64, 63, 63, 62, 62, 61, 60, 59,
+		66, 83, 64, 64, 63, 61, 60, 59, 59, 58, 57, 56, 55,
+		65, 62, 80, 62, 61, 59, 58, 56, 55, 55, 54, 53, 52,
+		65, 62, 59, 78, 59, 57, 56, 54, 53, 52, 51, 50, 50,
+		64, 61, 59, 57, 75, 56, 54, 53, 51, 50, 49, 48, 47,
+		62, 59, 57, 55, 53, 72, 53, 51, 50, 48, 46, 46, 45,
+		61, 58, 55, 53, 52, 50, 70, 50, 49, 47, 45, 43, 43,
+		61, 57, 54, 52, 50, 49, 47, 67, 48, 46, 45, 43, 41,
+		60, 56, 53, 50, 48, 47, 46, 45, 64, 46, 44, 42, 40,
+		60, 55, 52, 49, 47, 45, 44, 43, 43, 61, 44, 43, 41,
+		59, 54, 51, 49, 46, 43, 42, 41, 41, 41, 58, 41, 40,
+		58, 54, 50, 48, 45, 43, 40, 39, 39, 39, 38, 55, 39,
+		57, 53, 50, 47, 44, 42, 40, 37, 37, 37, 36, 35, 51
+		};
 
 		if (changed_value)
 		{
-			auto diff = slider_percents - prev_value;
-
-			float counter_percents = 0.f;
 			selected.reset();
-			for (int x = 0; x < 13; ++x)
+			float counter_percents = 0.f;
+			for (int i = 0; i < 169; ++i)
 			{
-				for (int y = 0; y < 13; ++y)
+				int found_max = -1;
+				int index_selected = -1;
+				float tmp_counter = 0.f;
+				for (int x = 0; x < 13; ++x)
 				{
-					if (counter_percents >= slider_percents) continue;
-					bool cur_state = selected[13 * x + y];
-					if (x > y)	// offsuit
+					for (int y = 0; y < 13; ++y)
 					{
-						counter_percents += 0.9f;
+						if (counter_percents >= slider_percents) continue;
+						if (!selected[13 * x + y])
+						{
+							int cur_element = arr_equity[13 * x + y];
+							found_max = std::max(found_max, cur_element);
+							if (found_max == cur_element)
+							{
+								index_selected = 13 * x + y;
+								if (x > y) tmp_counter = 12.f / 1326 * 100.f;		// 0.9f;
+								else if (x != y) tmp_counter = 4.f / 1326 * 100.f;	// 0.3f;
+								else if (x == y) tmp_counter = 6.f / 1326 * 100.f;	// 0.45f;
+							}
+						}
 					}
-					else if (x != y) // suit
-					{
-						counter_percents += 0.3f;
-					}
-					else if (x == y) // pairs
-					{
-						counter_percents += 0.45f;
-					}
-					selected[13 * x + y] = true;
+				}
+				
+				if (index_selected != -1)
+				{
+					selected[index_selected] = true;
+					counter_percents += tmp_counter;
 				}
 			}
 			slider_percents = counter_percents;
 		}
-		
 	}
 }
 
