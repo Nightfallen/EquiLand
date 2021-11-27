@@ -26,8 +26,11 @@ namespace widgets::EquiLand {
 
 		int N = 169;
 		bool isRandom = arr.all();  //std::all_of(arr, arr + N, [](bool x) { return x == true; });
+		bool isEmpty = arr.none();
 		if (isRandom)
-			return "random";
+			return "Random";
+		if (isEmpty)
+			return "Empty Range";
 
 		// Constructing pairs
 		const char* separator = "";

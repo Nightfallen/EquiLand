@@ -250,6 +250,9 @@ namespace widgets {
 		bool result = ImGui::Selectable(label, p_selected, flags, size_arg);
 		auto cur_item_flags = ImGui::GetItemFlags();
 		bool is_disabled = cur_item_flags & ImGuiItemFlags_Disabled;
+		auto vec_col = ImGui::ColorConvertU32ToFloat4(bg_color);
+		vec_col.w *= ImGui::GetStyle().Alpha;
+		bg_color = ImGui::ColorConvertFloat4ToU32(vec_col);
 		if (is_disabled)
 		{
 			bg_color = helpers::DarkenColor(bg_color, 15);
