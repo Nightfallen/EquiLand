@@ -138,8 +138,13 @@ namespace {
 			range.erase(0, pos + delimiter.length());
 			separator = ",";
 		}
-		if (pos == std::string::npos && result.empty() && range.find("-") != std::string::npos)
-			result = RebuildDashedRange(range);
+		if (!range.empty())
+		{
+			if (range.find("-") != std::string::npos)
+				result.append(separator).append(RebuildDashedRange(range));
+			else
+				result.append(separator).append(def_range);
+		}
 
 		std::cout << range << std::endl;
 		return result;
@@ -208,8 +213,8 @@ namespace widgets::EquiLand {
 		}
 
 
-
-		float wrap_width = 200.f;
+		
+		float wrap_width = ImGui::GetContentRegionAvailWidth();
 		ImVec2 pos = ImGui::GetCursorScreenPos();
 		ImVec2 marker_min = ImVec2(pos.x + wrap_width, pos.y);
 		ImVec2 marker_max = ImVec2(pos.x + wrap_width + 10, pos.y + ImGui::GetTextLineHeight());
