@@ -212,14 +212,18 @@ namespace widgets::EquiLand {
 			changed_values = false;
 		}
 
-
+		std::string_view out_text;
+		if (result_str.empty() || !bHeroHandSelected || range.empty())
+			out_text = output;
+		else
+			out_text = result_str;
 		
 		float wrap_width = ImGui::GetContentRegionAvailWidth();
 		ImVec2 pos = ImGui::GetCursorScreenPos();
 		ImVec2 marker_min = ImVec2(pos.x + wrap_width, pos.y);
 		ImVec2 marker_max = ImVec2(pos.x + wrap_width + 10, pos.y + ImGui::GetTextLineHeight());
 		ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
-		ImGui::Text(result_str.empty() ? output : result_str.data());
+		ImGui::Text(out_text.data());
 		if (ImGui::BeginPopupContextItem("some_id"))
 		{
 			if (ImGui::MenuItemEx("Copy Equity %", ICON_FA_LINK))
