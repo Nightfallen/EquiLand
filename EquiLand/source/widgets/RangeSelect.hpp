@@ -528,7 +528,10 @@ namespace widgets::EquiLand {
 		float prev_value = slider_percents;
 		bool changed_value = ImGui::SliderFloat("##Slider_Range_Percent", &slider_percents, 0.f, 100.f, "%.2f");
 		if (ImGui::IsItemDeactivatedAfterEdit())
+		{
 			str_range = BuildRangeString(selected);
+			matrix.range = str_range;
+		}
 		
 		// #TODO move this array to file with constants
 		static int arr_equity[169] = 
