@@ -336,10 +336,13 @@ namespace widgets::EquiLand {
 					if (name == child_node->name)
 					{
 						node->childs->erase(node->childs->begin() + i);
+						to_delete_range = nullptr;
 						break;
 					}
 					++i;
 				}
+				if (to_delete_range == nullptr)
+					break;
 			}
 		}
 
